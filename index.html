@@ -1021,7 +1021,7 @@ const ENTER = {
     say([['nar','砰！外母成個人跌咗落地，一嘟都唔嘟！','She slumps to the floor and lies still.'],
          ['nar','茶樓嘈到拆天，個個掛住食燒賣，冇人留意到。而家……得返你！','The restaurant is noisy. Nobody has noticed. It is up to you.']], ()=>go('RESPONSE')); },
   RESPONSE(){ music('tense'); setObj('response', true); },
-  CALL(){ if(G.called){ go('BREATH'); return; } if(G.phoneUp){ connectCall(); return; } setObj('call', true); },
+  CALL(){ if(G.called){ go('AIRWAY'); return; } if(G.phoneUp){ connectCall(); return; } setObj('call', true); },
   AIRWAY(){ hideObj(); setObj('airway'); $('#airCard').style.display='flex'; G.tState=performance.now();
     show('op','「好，聽住！先幫佢鬆開個衣領，一隻手按住額頭，另一隻手托高下巴，打開氣道！」','“Loosen her collar. One hand on her forehead, the other lifts her chin to open the airway.”'); },
   BREATH(){ $('#airCard').style.display='none'; G.breathAcc=0; show('op','「睇住佢心口——有冇正常呼吸呀？」','“Is she breathing normally? Watch her chest.”'); setObj('breath'); G.tState=performance.now(); },
