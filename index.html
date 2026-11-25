@@ -484,7 +484,9 @@ document.querySelector('#torsoAed .tgt').style.display='none';
 
 /* ===================== audio ===================== */
 let AC=null, voiceOn = store.get('voice', true);
-function audio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume(); return AC; }
+// The sound engine is only created after the first tap or key press (iPhone keeps an engine made earlier silent).
+function audio(){ if(!AC){ if(!unlocked) return null; try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(AC && AC.state!=='running'){ try{ AC.resume(); }catch(e){} } return AC; }
 /* Phones only allow sound after a tap, and iOS also needs the first speech to start inside that tap.
    unlockAudio() runs on the first tap / key press: it wakes the audio engine, plays one silent sample,
    and speaks one silent word so later speech is allowed. */
@@ -509,11 +511,14 @@ function fillVoiceList(){
 }
 if('speechSynthesis' in window){ loadVoices(); try{ speechSynthesis.addEventListener('voiceschanged', loadVoices); }catch(e){} }
 function unlockAudio(){
-  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}   // iOS 17+: play even with the silent switch on
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}   // iOS 17+: play even with the silent switch on (set before the engine exists)
+  const first=!unlocked; unlocked=true;
   const ac=audio();
   if(ac){ try{ const b=ac.createBuffer(1,1,22050), src=ac.createBufferSource(); src.buffer=b; src.connect(ac.destination); src.start(0); }catch(e){} }
-  if(!unlocked && 'speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} }
-  unlocked=true;
+  if(first){
+    if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance('你好'); u.volume=0.01; const v=pickVoice(); if(v){ u.voice=v; u.lang=v.lang; } speechSynthesis.speak(u); }catch(e){} }
+    if(MUS.track) music(MUS.track, true);          // start the music that was waiting for the first tap
+  }
 }
 ['pointerdown','touchend','keydown','click'].forEach(t=>addEventListener(t, unlockAudio, {capture:true, passive:true}));
 function beep(f=880, d=.08, type='square', vol=.15, when=0){
@@ -523,10 +528,13 @@ function beep(f=880, d=.08, type='square', vol=.15, when=0){
 }
 function speak(text, who){
   if(!voiceOn || FAST || !('speechSynthesis' in window)) return;
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/[「」『』]/g,''));
+  try{ const u=new SpeechSynthesisUtterance(text.replace(/[「」『』]/g,''));
     if(!VOICES.length) loadVoices(); const v=pickVoice();
     if(!v) return;                                   // Cantonese only: never fall back to another language
-    u.voice=v; u.lang=v.lang; u.rate= who==='aed'?0.95:1.08; u.pitch= who==='gm'?1.25: who==='aed'?0.8:1; u.onstart=()=>{ MUS.duck=1; }; u.onend=u.onerror=()=>{ MUS.duck=0; }; if(speechSynthesis.paused) speechSynthesis.resume(); speechSynthesis.speak(u);
+    u.voice=v; u.lang=v.lang; u.rate= who==='aed'?0.95:1.08; u.pitch= who==='gm'?1.25: who==='aed'?0.8:1; u.onstart=()=>{ MUS.duck=1; }; u.onend=u.onerror=()=>{ MUS.duck=0; }; if(speechSynthesis.paused) speechSynthesis.resume();
+    // Safari drops a line spoken straight after cancel(): cancel, then speak a moment later
+    if(speechSynthesis.speaking || speechSynthesis.pending){ speechSynthesis.cancel(); clearTimeout(speak.t); speak.t=setTimeout(()=>{ try{ speechSynthesis.speak(u); }catch(e){} }, 80); }
+    else speechSynthesis.speak(u);
   }catch(e){}
 }
 
@@ -990,7 +998,7 @@ function frame(now){
   if(S!=='ATTRACT' && !G.busy && now-G.lastEvent>CFG.idleResetMs && !FAST) reset();
   // operator panel
   if($('#sim').classList.contains('open')){
-    $('#raw').textContent = `深度 ${HW.depth.toFixed(1)} mm   距離 ${HW.tof} mm   靜止 ${HW.base|0} mm\n茶壺 ${HW.pot} 電話 ${HW.phone} AED ${HW.aed}\n胸口接觸點 ${HW.contact}\n狀態 ${S}${G.busy?' (對白中)':''}   按壓 ${G.comps.length}`;
+    $('#raw').textContent = `聲音 ${AC?AC.state:'未啟動（點一下畫面）'}\n深度 ${HW.depth.toFixed(1)} mm   距離 ${HW.tof} mm   靜止 ${HW.base|0} mm\n茶壺 ${HW.pot} 電話 ${HW.phone} AED ${HW.aed}\n胸口接觸點 ${HW.contact}\n狀態 ${S}${G.busy?' (對白中)':''}   按壓 ${G.comps.length}`;
     SIMOBJ.forEach(([k])=>{ const b=$('#sim_'+k); if(b) b.classList.toggle('on', !!HW[k] && k!=='shoulder'); });
   }
   requestAnimationFrame(frame);
