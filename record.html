@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Save Lover 錄音</title>
+<style>
+/* VOICE: a recording booth checklist, warm and calm
+   IDEA: a script sheet; each line is a take you can redo
+   PICTURE: the script itself, with a big record button per line
+   COLOUR and TYPE: teahouse red and gold on cream, Noto Sans TC
+   LAYOUT: sticky progress bar, one column of takes */
+:root{color-scheme:light dark;--bg:light-dark(#fbf5ea,#1a0f0c);--card:light-dark(#fff,#26160f);--ink:light-dark(#2a1206,#f6ead0);--muted:light-dark(#7a6656,#c9b49a);--line:light-dark(#ead9bf,#3e2a1f);--red:#b3211f;--gold:light-dark(#9a6b10,#e9b949);--ok:light-dark(#1f7a55,#5fe0aa)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans TC","PingFang HK","Microsoft JhengHei",system-ui,sans-serif;overflow-x:clip}
+header{padding:28px max(5vw,16px) 8px;max-width:900px;margin:0 auto}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0 0 8px}
+h1 span{color:var(--red)}
+.tips{color:var(--muted);margin:0;max-width:62ch}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px max(5vw,16px)}
+.bar-in{max-width:900px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.prog{flex:1 1 180px;height:10px;border-radius:5px;background:var(--line);overflow:hidden}.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.count{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+button,select{font:inherit;font-size:16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;min-height:44px;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:700}
+button:disabled{opacity:.45;cursor:default}
+main{max-width:900px;margin:0 auto;padding:12px max(5vw,16px) 60px;display:flex;flex-direction:column;gap:10px}
+.take{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.take.done{border-color:var(--ok)}
+.take.rec{border-color:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 30%,transparent)}
+.n{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.who{display:inline-block;font-size:13px;font-weight:700;border-radius:999px;padding:1px 10px;margin-right:6px;background:var(--line);color:var(--ink);white-space:nowrap}
+.who.gm{background:#f3d27a;color:#3a2a06}.who.op{background:#2b62c9;color:#fff}.who.aed{background:#1f8a5f;color:#fff}.who.medic{background:#5b3fa8;color:#fff}.who.you{background:var(--red);color:#fff}
+.txt{font-size:19px;font-weight:600;line-height:1.45}
+.st{grid-column:2;font-size:13px;color:var(--muted)}.done .st{color:var(--ok)}
+.btns{display:flex;gap:6px;grid-row:1/3;grid-column:3}
+.rec-btn{width:52px;height:52px;border-radius:50%;padding:0;background:var(--red);border-color:var(--red);color:#fff;font-size:20px}
+.rec .rec-btn{background:#222;border-color:#222}
+.play-btn{width:52px;height:52px;border-radius:50%;padding:0;font-size:18px}
+.note{background:var(--card);border:1px dashed var(--gold);border-radius:14px;padding:12px 16px;color:var(--ink);font-size:15px}
+@media(max-width:600px){.take{grid-template-columns:28px minmax(0,1fr)}.btns{grid-row:auto;grid-column:2}.txt{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style></head><body>
+<header>
+  <h1>Save Lover <span>錄音</span></h1>
+  <p class="tips">逐句按 ● 錄音，講完按 ■ 停止，再按 ▶ 聽返。唔滿意就再錄一次，會覆蓋舊嗰個。錄好嘅聲會留喺呢部機嘅瀏覽器，全部錄完按「下載全部錄音」。</p>
+</header>
+<div class="bar"><div class="bar-in">
+  <select id="role" aria-label="角色"><option value="">全部角色</option></select>
+  <div class="prog" aria-hidden="true"><i id="progBar"></i></div>
+  <span class="count" id="count">0 / 0</span>
+  <button class="primary" id="dl">下載全部錄音</button>
+</div></div>
+<main>
+  <div class="note">錄音小貼士：用電腦或手機嘅 Chrome／Edge／Safari；揀靜嘅地方，嘴離咪大約一個拳頭；講完停一秒先按停止，頭尾嘅靜音會自動剪走。每個角色最好由同一位組員錄。</div>
+  <div id="list"></div>
+  <p class="tips" id="msg" role="status"></p>
+</main>
+<script>
+{
+const LINES = [["nar", "星期六朝早，長發邨茶樓。你照舊陪外母飲茶。"], ["gm", "乖喇，又嚟陪我。今日啲蝦餃好新鮮，食多兩粒啦。"], ["gm", "下星期六阿女生日，我哋再嚟呢度，好唔好？"], ["gm", "咦……我個心口……有啲翳……"], ["nar", "砰——外母成個人跌咗落地，一動不動。"], ["nar", "茶樓好嘈，冇人留意到。而家得你。"], ["you", "媽！媽！你聽唔聽到？"], ["nar", "冇反應。冇反應，就要即刻求救。"], ["op", "999 緊急中心。"], ["you", "長發邨茶樓！我外母暈低咗，叫佢冇反應！"], ["op", "救護車出發緊。放低電話，我一路教你做。"], ["op", "佢有冇正常呼吸？睇住佢心口。"], ["nar", "心口冇起伏，只係間中喘氣：唔係正常呼吸。"], ["op", "即刻做心外壓！"], ["op", "跟住畫面擺好姿勢，一撳落去就開始計。"], ["op", "跪喺膝頭貼紙上。"], ["op", "雙手疊埋，掌根放喺胸口貼紙。"], ["op", "手踭伸直，膊頭喺手正上方。"], ["op", "準備好，跟住節拍，開始壓！"], ["op", "壓深啲"], ["op", "做得好，唔好停！附近有冇 AED？睇下牆上綠色標誌，攞過嚟！"], ["op", "AED 到！即刻開機，跟佢指示。"], ["op", "好！而家用 AED，撳開機掣。"], ["op", "你手上有 AED？即刻開機，跟佢指示。"], ["aed", "AED 已開機。請保持冷靜，跟住指示做。"], ["aed", "撕開電極片，一塊貼喺右邊鎖骨下面，一塊貼喺左邊腋下。"], ["aed", "正在分析心律。不要觸碰病人。"], ["aed", "建議電擊。所有人離開病人。"], ["aed", "電擊完成。電極片唔好撕走，立即繼續心外壓。"], ["nar", "遠處傳嚟救護車聲。救護員衝入嚟接手。"], ["medic", "有返脈搏喇！你頭先嘅心外壓同電擊，救返佢一命。"], ["nar", "下個星期六，同一張枱。"], ["gm", "今次等我斟茶畀你。"], ["op", "恭喜你，救返外母！你係救心英雄。"], ["nar", "你一直壓到救護員到場。但係心臟始終未回復正常跳動。"], ["medic", "我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。"], ["nar", "外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。"], ["nar", "冇人繼續壓。幾分鐘後救護員先趕到。"], ["nar", "救護員到場，接手急救。"], ["medic", "我哋盡力喇…… 太遲喇。"], ["nar", "下個星期六，張枱空咗一個位。"], ["nar", "現實冇得重來。但喺呢度，你可以再試一次。"], ["op", "先影張飲茶相。坐好，望住鏡頭。"], ["warn", "等陣！未確認佢有冇反應，亦未求救。先拍膊頭。"], ["warn", "電話喺手。打之前，先拍膊頭確認佢有冇反應。"], ["warn", "得你一個人撐唔耐。先打 999，調派員會教你做。"], ["warn", "AED 到手——但你仲未確認佢有冇反應，亦未叫救護車。"], ["warn", "AED 到手。記住仲要打 999。"]];
+const ROLE = { nar:'旁白', gm:'外母', you:'你（玩家）', op:'999 調派員', aed:'AED 語音', warn:'提示', medic:'救護員' };
+function voiceId(t){ let h=5381; for(let i=0;i<t.length;i++){ h=((h<<5)+h+t.charCodeAt(i))|0; } return 'v'+(h>>>0).toString(36); }
+const items = LINES.map(([who,text],i)=>({ i, who, text, id: voiceId(text) }));
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const takes = {};             // id -> {blob, dur}
+let ac=null, rec=null, recId=null, chunks=[], stream=null, player=null;
+
+/* ---- storage: keep takes in this browser (IndexedDB) ---- */
+let db=null;
+function openDB(){ return new Promise(res=>{ try{ const r=indexedDB.open('saveLoverVoice',1); r.onupgradeneeded=()=>r.result.createObjectStore('takes'); r.onsuccess=()=>{ db=r.result; res(); }; r.onerror=()=>res(); }catch(e){ res(); } }); }
+function saveTake(id,t){ try{ db && db.transaction('takes','readwrite').objectStore('takes').put(t,id); }catch(e){} }
+function loadTakes(){ return new Promise(res=>{ if(!db) return res(); try{ const st=db.transaction('takes').objectStore('takes'); const r=st.openCursor();
+  r.onsuccess=()=>{ const c=r.result; if(c){ takes[c.key]=c.value; c.continue(); } else res(); }; r.onerror=()=>res(); }catch(e){ res(); } }); }
+
+/* ---- render ---- */
+$('#role').innerHTML += Object.keys(ROLE).filter(k=>items.some(x=>x.who===k)).map(k=>`<option value="${k}">${ROLE[k]}（${items.filter(x=>x.who===k).length} 句）</option>`).join('');
+function render(){
+  const f=$('#role').value;
+  $('#list').innerHTML = items.filter(x=>!f||x.who===f).map(x=>{ const t=takes[x.id];
+    return `<div class="take${t?' done':''}${recId===x.id?' rec':''}" id="t-${x.id}">
+      <div class="n">${x.i+1}</div>
+      <div><span class="who ${x.who}">${ROLE[x.who]}</span><span class="txt">${esc(x.text)}</span></div>
+      <div class="btns"><button class="rec-btn" data-rec="${x.id}" aria-label="${recId===x.id?'停止':'錄音'}">${recId===x.id?'■':'●'}</button>
+        <button class="play-btn" data-play="${x.id}" aria-label="播放" ${t?'':'disabled'}>▶</button></div>
+      <div class="st">${recId===x.id?'錄緊音……講完按 ■':t?'已錄 '+t.dur.toFixed(1)+' 秒':'未錄'}</div></div>`; }).join('');
+  const n=items.filter(x=>takes[x.id]).length; $('#count').textContent=n+' / '+items.length; $('#progBar').style.width=(n/items.length*100)+'%';
+}
+$('#role').onchange=render;
+
+/* ---- record ---- */
+async function start(id){
+  if(rec) await stop();
+  try{ stream = stream || await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+  catch(e){ $('#msg').textContent='開唔到咪：請喺瀏覽器允許使用麥克風。'; return; }
+  ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state!=='running') ac.resume();
+  chunks=[]; rec=new MediaRecorder(stream); recId=id;
+  rec.ondataavailable=e=>{ if(e.data.size) chunks.push(e.data); };
+  rec.start(); render();
+}
+function stop(){ return new Promise(resolve=>{ if(!rec) return resolve(); const id=recId;
+  rec.onstop=async()=>{ rec=null; recId=null;
+    try{ const raw=await new Blob(chunks).arrayBuffer(); const buf=await ac.decodeAudioData(raw); const wav=await toWav(buf);
+      takes[id]={ blob:wav.blob, dur:wav.dur }; saveTake(id,takes[id]); $('#msg').textContent='';
+    }catch(e){ $('#msg').textContent='呢句錄唔到，請再試一次。'; }
+    render(); resolve(); };
+  rec.stop(); }); }
+/* trim silence at both ends, mono 24 kHz, 16-bit WAV */
+async function toWav(buf){
+  const d=buf.getChannelData(0), sr=buf.sampleRate, thr=0.02, pad=Math.floor(sr*0.12);
+  let a=0,b=d.length-1; while(a<d.length && Math.abs(d[a])<thr) a++; while(b>a && Math.abs(d[b])<thr) b--;
+  a=Math.max(0,a-pad); b=Math.min(d.length-1,b+pad); if(b<=a){ a=0; b=d.length-1; }
+  const len=b-a+1, out=24000, n=Math.ceil(len*out/sr);
+  const off=new OfflineAudioContext(1,n,out), src=off.createBufferSource(), cut=off.createBuffer(1,len,sr);
+  cut.copyToChannel(d.subarray(a,b+1),0); src.buffer=cut; src.connect(off.destination); src.start();
+  const r=(await off.startRendering()).getChannelData(0);
+  let peak=0; for(const v of r) peak=Math.max(peak,Math.abs(v)); const g=peak>0? Math.min(4, 0.89/peak) : 1;   // even out loudness
+  const bytes=new DataView(new ArrayBuffer(44+r.length*2)); const w=(o,s)=>{ for(let i=0;i<s.length;i++) bytes.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); bytes.setUint32(4,36+r.length*2,true); w(8,'WAVE'); w(12,'fmt '); bytes.setUint32(16,16,true); bytes.setUint16(20,1,true); bytes.setUint16(22,1,true);
+  bytes.setUint32(24,out,true); bytes.setUint32(28,out*2,true); bytes.setUint16(32,2,true); bytes.setUint16(34,16,true); w(36,'data'); bytes.setUint32(40,r.length*2,true);
+  for(let i=0;i<r.length;i++){ const v=Math.max(-1,Math.min(1,r[i]*g)); bytes.setInt16(44+i*2, v<0? v*0x8000 : v*0x7fff, true); }
+  return { blob:new Blob([bytes],{type:'audio/wav'}), dur:r.length/out };
+}
+$('#list').onclick=async e=>{
+  const r=e.target.closest('[data-rec]'), p=e.target.closest('[data-play]');
+  if(r){ const id=r.dataset.rec; if(recId===id) await stop(); else await start(id); }
+  if(p){ const t=takes[p.dataset.play]; if(!t) return; if(player) player.pause(); player=new Audio(URL.createObjectURL(t.blob)); player.play().catch(()=>{}); }
+};
+
+/* ---- a small zip writer (files stored, not compressed) ---- */
+const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC[(c^u8[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+async function makeZip(files){              // files: [{name, data: Blob|string}]
+  const enc=new TextEncoder(), parts=[], central=[]; let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name), data=typeof f.data==='string'? enc.encode(f.data) : new Uint8Array(await f.data.arrayBuffer()), crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30)); h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true);
+    h.setUint32(14,crc,true); h.setUint32(18,data.length,true); h.setUint32(22,data.length,true); h.setUint16(26,name.length,true);
+    parts.push(h,name,data);
+    const c=new DataView(new ArrayBuffer(46)); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true);
+    c.setUint32(16,crc,true); c.setUint32(20,data.length,true); c.setUint32(24,data.length,true); c.setUint16(28,name.length,true); c.setUint32(42,off,true);
+    central.push(c,name); off+=30+name.length+data.length;
+  }
+  const size=central.reduce((a,x)=>a+(x.byteLength),0), e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,size,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...central,e],{type:'application/zip'});
+}
+/* ---- download everything as one zip: voice/<id>.wav + voice/index.json ---- */
+$('#dl').onclick=async()=>{
+  const done=items.filter(x=>takes[x.id]); if(!done.length){ $('#msg').textContent='未有任何錄音。'; return; }
+  const files=[], index={}, list=[];
+  done.forEach(x=>{ files.push({name:'voice/'+x.id+'.wav', data:takes[x.id].blob}); index[x.id]='wav'; list.push(`${x.id}.wav\t${ROLE[x.who]}\t${x.text}`); });
+  files.push({name:'voice/index.json', data:JSON.stringify(index)}, {name:'voice/script.txt', data:list.join('\n')});
+  const blob=await makeZip(files); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='save_lover_voice.zip'; document.body.appendChild(a); a.click(); a.remove();
+  $('#msg').textContent=`已下載 ${done.length} 句錄音（save_lover_voice.zip）。`;
+};
+openDB().then(loadTakes).then(render);
+}
+</script></body></html>

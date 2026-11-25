@@ -521,6 +521,7 @@ function unlockAudio(){
   if(first){
     if('speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance('你好'); u.volume=0.01; const v=pickVoice(); if(v){ u.voice=v; u.lang=v.lang; } speechSynthesis.speak(u); }catch(e){} }
     if(MUS.track) music(MUS.track, true);          // start the music that was waiting for the first tap
+    prefetchVoices();
   }
 }
 ['pointerdown','touchend','keydown','click'].forEach(t=>addEventListener(t, unlockAudio, {capture:true, passive:true}));
@@ -529,9 +530,56 @@ function beep(f=880, d=.08, type='square', vol=.15, when=0){
   o.type=type; o.frequency.value=f; g.gain.value=vol; o.connect(g); g.connect(ac.destination);
   const t=ac.currentTime+when; o.start(t); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d); o.stop(t+d+.02);
 }
+/* ===================== recorded voices =====================
+   Every spoken line can be a recording in the folder voice/ next to this file, named by voiceId(text) + .mp3 or .wav
+   (record.html makes them). A recording always wins; a line without one falls back to the device's Cantonese voice. */
+const VOICE_LINES = ["星期六朝早，長發邨茶樓。你照舊陪外母飲茶。", "乖喇，又嚟陪我。今日啲蝦餃好新鮮，食多兩粒啦。", "下星期六阿女生日，我哋再嚟呢度，好唔好？", "咦……我個心口……有啲翳……", "砰——外母成個人跌咗落地，一動不動。", "茶樓好嘈，冇人留意到。而家得你。", "媽！媽！你聽唔聽到？", "冇反應。冇反應，就要即刻求救。", "999 緊急中心。", "長發邨茶樓！我外母暈低咗，叫佢冇反應！", "救護車出發緊。放低電話，我一路教你做。", "佢有冇正常呼吸？睇住佢心口。", "心口冇起伏，只係間中喘氣：唔係正常呼吸。", "即刻做心外壓！", "跟住畫面擺好姿勢，一撳落去就開始計。", "跪喺膝頭貼紙上。", "雙手疊埋，掌根放喺胸口貼紙。", "手踭伸直，膊頭喺手正上方。", "準備好，跟住節拍，開始壓！", "壓深啲", "做得好，唔好停！附近有冇 AED？睇下牆上綠色標誌，攞過嚟！", "AED 到！即刻開機，跟佢指示。", "好！而家用 AED，撳開機掣。", "你手上有 AED？即刻開機，跟佢指示。", "AED 已開機。請保持冷靜，跟住指示做。", "撕開電極片，一塊貼喺右邊鎖骨下面，一塊貼喺左邊腋下。", "正在分析心律。不要觸碰病人。", "建議電擊。所有人離開病人。", "電擊完成。電極片唔好撕走，立即繼續心外壓。", "遠處傳嚟救護車聲。救護員衝入嚟接手。", "有返脈搏喇！你頭先嘅心外壓同電擊，救返佢一命。", "下個星期六，同一張枱。", "今次等我斟茶畀你。", "恭喜你，救返外母！你係救心英雄。", "你一直壓到救護員到場。但係心臟始終未回復正常跳動。", "我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。", "外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。", "冇人繼續壓。幾分鐘後救護員先趕到。", "救護員到場，接手急救。", "我哋盡力喇…… 太遲喇。", "下個星期六，張枱空咗一個位。", "現實冇得重來。但喺呢度，你可以再試一次。", "先影張飲茶相。坐好，望住鏡頭。", "等陣！未確認佢有冇反應，亦未求救。先拍膊頭。", "電話喺手。打之前，先拍膊頭確認佢有冇反應。", "得你一個人撐唔耐。先打 999，調派員會教你做。", "AED 到手——但你仲未確認佢有冇反應，亦未叫救護車。", "AED 到手。記住仲要打 999。"];
+function voiceId(t){ let h=5381; for(let i=0;i<t.length;i++){ h=((h<<5)+h+t.charCodeAt(i))|0; } return 'v'+(h>>>0).toString(36); }
+const VO = { tok:0, src:null, el:null, raw:{}, buf:{}, list:null, http: /^https?:/.test(location.protocol) };
+function voiceManifest(){                     // voice/index.json lists the recordings that exist, so missing ones cost no requests
+  if(VO.list!==null) return Promise.resolve(VO.list);
+  if(!VO.http){ VO.list=undefined; return Promise.resolve(undefined); }
+  return VO.listP || (VO.listP = fetch('voice/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():undefined).catch(()=>undefined).then(j=>{ VO.list=j; return j; }));
+}
+function fetchVoice(id){                      // -> ArrayBuffer or null
+  if(id in VO.raw) return VO.raw[id];
+  return VO.raw[id] = voiceManifest().then(list=>{
+    const exts = list ? (list[id] ? [list[id]] : []) : ['mp3','wav'];
+    const next=i=> i>=exts.length ? null : fetch('voice/'+id+'.'+exts[i]).then(r=>r.ok?r.arrayBuffer():next(i+1)).catch(()=>next(i+1));
+    return next(0);
+  });
+}
+function stopVoice(){ VO.tok++; if(VO.src){ try{ VO.src.stop(); }catch(e){} VO.src=null; } if(VO.el){ try{ VO.el.pause(); }catch(e){} VO.el=null; } MUS.duck=0; clearTimeout(speak.t); }
+function voiceStarted(clean, dur){ MUS.duck=1;
+  if(G.busy && G.curLine===clean && dur){ const need=dur*1000+350, el=performance.now()-G.lineStart;   // keep the dialogue box up until the recording ends
+    if(need>G.lineMs){ clearTimeout(G.qTimer); G.lineMs=need; G.qTimer=setTimeout(nextLine, Math.max(0,need-el)); } } }
+function playRecorded(clean, tok){
+  const id=voiceId(clean);
+  if(VO.http){
+    return fetchVoice(id).then(ab=>{ if(!ab) return false; if(tok!==VO.tok) return true; const ac=audio(); if(!ac) return false;
+      const go=buf=>{ if(tok!==VO.tok) return true; const src=ac.createBufferSource(); src.buffer=buf; src.connect(ac.destination);
+        src.onended=()=>{ if(VO.src===src){ VO.src=null; MUS.duck=0; } }; VO.src=src; src.start(); voiceStarted(clean, buf.duration); return true; };
+      if(VO.buf[id]) return go(VO.buf[id]);
+      return ac.decodeAudioData(ab.slice(0)).then(buf=>{ VO.buf[id]=buf; return go(buf); }).catch(()=>false);
+    });
+  }
+  return new Promise(res=>{                    // opened as a local file: plain audio element
+    const tryExt=exts=>{ if(!exts.length){ VO.raw[id]=null; return res(false); }
+      const a=new Audio('voice/'+id+'.'+exts[0]); a.onerror=()=>tryExt(exts.slice(1));
+      a.onloadedmetadata=()=>{ if(tok!==VO.tok) return res(true); VO.el=a; a.onended=()=>{ if(VO.el===a){ VO.el=null; MUS.duck=0; } };
+        const pr=a.play(); if(pr&&pr.catch) pr.catch(()=>{}); voiceStarted(clean, a.duration); res(true); }; };
+    if(VO.raw[id]===null) return res(false); tryExt(['mp3','wav']);
+  });
+}
+function prefetchVoices(){ if(!VO.http) return; voiceManifest().then(list=>{ if(!list) return; VOICE_LINES.forEach((t,i)=>{ if(list[voiceId(t)]) setTimeout(()=>fetchVoice(voiceId(t)), i*60); }); }); }
 function speak(text, who){
-  if(!voiceOn || FAST || !('speechSynthesis' in window)) return;
-  try{ const u=new SpeechSynthesisUtterance(text.replace(/[「」『』]/g,''));
+  if(!voiceOn || FAST) return;
+  const clean=text.replace(/[「」『』]/g,''); stopVoice(); const tok=VO.tok;
+  playRecorded(clean, tok).then(ok=>{ if(!ok && tok===VO.tok) ttsSpeak(clean, who); });
+}
+function ttsSpeak(text, who){
+  if(!('speechSynthesis' in window)) return;
+  try{ const u=new SpeechSynthesisUtterance(text);
     let v=pickVoice(); if(!v){ loadVoices(); v=pickVoice(); }          // Safari often hands over its voice list late
     if(v){ u.voice=v; u.lang=v.lang; }
     else if(!VOICES.length){ u.lang='zh-HK'; }       // list still empty (Safari): ask for Hong Kong Cantonese by language
@@ -705,7 +753,7 @@ $('#bReset').onclick=()=>reset();
 $('#bVoice').onclick=e=>{ voiceOn=!voiceOn; store.set('voice',voiceOn); e.target.textContent='語音：'+(voiceOn?'開':'關'); if(!voiceOn&&window.speechSynthesis) speechSynthesis.cancel(); };
 $('#bVoice').textContent='語音：'+(voiceOn?'開':'關');
 $('#voiceSel').onchange=e=>{ store.set('voiceName', e.target.value); fillVoiceList(); };
-$('#bTestVoice').onclick=()=>{ unlockAudio(); const was=voiceOn; voiceOn=true; speak('外母，你聽唔聽到我講嘢？','op'); voiceOn=was; };
+$('#bTestVoice').onclick=()=>{ unlockAudio(); const was=voiceOn; voiceOn=true; speak(VOICE_LINES[0],'nar'); voiceOn=was; };
 setTimeout(fillVoiceList, 0); { let n=0; const vt=setInterval(()=>{ loadVoices(); if(pickVoice()||++n>15) clearInterval(vt); }, 1000); }
 $('#bMusic').onclick=e=>{ audio(); MUS.on=!MUS.on; store.set('music',MUS.on); e.target.textContent='音樂：'+(MUS.on?'開':'關'); };
 $('#bMusic').textContent='音樂：'+(MUS.on?'開':'關');
@@ -784,14 +832,15 @@ function tag(zh,en){ $('#sceneTag').innerHTML = zh+'<small>'+en+'</small>'; }
 const WHO = { gm:['外母','gm'], you:['你',''], op:['999 調派員','op'], aed:['AED 語音','aed'], nar:['',  'nar'], warn:['提示','warn'], medic:['救護員','op'] };
 /* blocking dialogue: say([[who, zh, en], ...], then) */
 function stopTalk(){ clearTimeout(G.qTimer); clearTimeout(G.briefT); G.queue=[]; G.then=null; G.busy=false; G.pending=[]; $('#dialog').style.display='none';
-  if(window.speechSynthesis) try{ speechSynthesis.cancel(); }catch(e){} }
+  stopVoice(); if(window.speechSynthesis) try{ speechSynthesis.cancel(); }catch(e){} }
 function say(lines, then){ G.queue = lines.slice(); G.then = then||null; G.busy=true; nextLine(); }
 function nextLine(){
   clearTimeout(G.qTimer);
   if(!G.queue.length){ G.busy=false; $('#dialog').style.display='none'; const t=G.then; G.then=null; if(t) t();
     const pend=G.pending; G.pending=[]; pend.forEach(ev=>{ if(!G.busy) fire(ev); else if(!G.pending.includes(ev)) G.pending.push(ev); }); return; }
-  const [who, zh, en, fx] = G.queue.shift(); show(who, zh, en); if(fx) fx();
-  G.qTimer = setTimeout(nextLine, FAST? 30 : Math.max(2200, zh.length*230));
+  const [who, zh, en, fx] = G.queue.shift(); G.curLine=zh.replace(/[「」『』]/g,''); G.lineStart=performance.now(); G.lineMs=FAST? 30 : Math.max(2200, zh.length*230);
+  show(who, zh, en); if(fx) fx();
+  G.qTimer = setTimeout(nextLine, G.lineMs);
 }
 /* non-blocking caption */
 function show(who, zh, en){ const w=WHO[who]; const el=$('#dWho'); el.textContent=w[0]; el.className='who '+w[1]; el.style.display=w[0]?'inline-block':'none';
@@ -802,7 +851,7 @@ function setMode(m){ G.mode=m; store.set('mode',m); $('#mTrain').classList.toggl
 $('#mTrain').onclick=()=>{audio();setMode('train')}; $('#mReal').onclick=()=>{audio();setMode('real')}; setMode(G.mode);
 
 function reset(){
-  clearTimeout(G.qTimer); clearTimeout(G.noteT); if(window.speechSynthesis) try{speechSynthesis.cancel()}catch(e){}
+  clearTimeout(G.qTimer); clearTimeout(G.noteT); stopVoice(); if(window.speechSynthesis) try{speechSynthesis.cancel()}catch(e){}
   Object.assign(G,{ state:'ATTRACT', busy:false, queue:[], then:null, surv:85, comps:[], round:0, roundCount:0, lastComp:0, log:{}, flags:{}, breathAcc:0, aedFetched:false, called:false, shocked:false, t0:0, pending:[], tShock:0, tResume:0, touchLatch:false, anT:0, lastContact:0, warned:false, shallow:0, phoneUp:false, tDial:0, clearTouches:0 });
   HW.contact=0; $('#lampCount').textContent='0 下到位';
   ['#dialog','#cpr','#aed','#debrief','#surv','#clock','#cert','#photo','#brief'].forEach(s=>$(s).style.display='none'); hideObj(); clearTimeout(G.certT); clearTimeout(G.photoT); clearTimeout(G.briefT);
