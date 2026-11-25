@@ -507,7 +507,10 @@ function fillVoiceList(){
   sel.innerHTML = list.map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}"${cur&&v.name===cur.name?' selected':''}>${isCanto(v)?'廣東話 · ':''}${v.name} (${v.lang})</option>`).join('')
     || '<option value="">搵唔到廣東話語音</option>';
   const st=document.getElementById('voiceState');
-  if(st){ st.textContent = cur ? '廣東話語音：'+cur.name : '未有廣東話語音：遊戲唔會出聲，只顯示字幕。請用 Edge 開'; st.style.color = cur ? '#5fe0aa' : '#ff9f1c'; }
+  if(st){ const canto=VOICES.filter(isCanto).length;
+    st.textContent = (cur ? '廣東話語音：'+cur.name : (VOICES.length ? '未有廣東話語音：遊戲只顯示字幕' : '語音清單未載入（會用 zh-HK 試讀）'))
+      + `　（共 ${VOICES.length} 個語音，廣東話 ${canto} 個）`;
+    st.style.color = cur ? '#5fe0aa' : '#ff9f1c'; }
 }
 if('speechSynthesis' in window){ loadVoices(); try{ speechSynthesis.addEventListener('voiceschanged', loadVoices); }catch(e){} }
 function unlockAudio(){
@@ -529,9 +532,10 @@ function beep(f=880, d=.08, type='square', vol=.15, when=0){
 function speak(text, who){
   if(!voiceOn || FAST || !('speechSynthesis' in window)) return;
   try{ const u=new SpeechSynthesisUtterance(text.replace(/[「」『』]/g,''));
-    if(!VOICES.length) loadVoices(); const v=pickVoice();
-    if(!v) return;                                   // Cantonese only: never fall back to another language
-    u.voice=v; u.lang=v.lang; u.rate= who==='aed'?0.95:1.08; u.pitch= who==='gm'?1.25: who==='aed'?0.8:1; u.onstart=()=>{ MUS.duck=1; }; u.onend=u.onerror=()=>{ MUS.duck=0; }; if(speechSynthesis.paused) speechSynthesis.resume();
+    let v=pickVoice(); if(!v){ loadVoices(); v=pickVoice(); }          // Safari often hands over its voice list late
+    if(v){ u.voice=v; u.lang=v.lang; }
+    else if(!VOICES.length){ u.lang='zh-HK'; }       // list still empty (Safari): ask for Hong Kong Cantonese by language
+    else return;                                     // voices listed but none Cantonese: stay silent, never another language u.rate= who==='aed'?0.95:1.08; u.pitch= who==='gm'?1.25: who==='aed'?0.8:1; u.onstart=()=>{ MUS.duck=1; }; u.onend=u.onerror=()=>{ MUS.duck=0; }; if(speechSynthesis.paused) speechSynthesis.resume();
     // Safari drops a line spoken straight after cancel(): cancel, then speak a moment later
     if(speechSynthesis.speaking || speechSynthesis.pending){ speechSynthesis.cancel(); clearTimeout(speak.t); speak.t=setTimeout(()=>{ try{ speechSynthesis.speak(u); }catch(e){} }, 80); }
     else speechSynthesis.speak(u);
@@ -702,7 +706,7 @@ $('#bVoice').onclick=e=>{ voiceOn=!voiceOn; store.set('voice',voiceOn); e.target
 $('#bVoice').textContent='語音：'+(voiceOn?'開':'關');
 $('#voiceSel').onchange=e=>{ store.set('voiceName', e.target.value); fillVoiceList(); };
 $('#bTestVoice').onclick=()=>{ unlockAudio(); const was=voiceOn; voiceOn=true; speak('外母，你聽唔聽到我講嘢？','op'); voiceOn=was; };
-setTimeout(fillVoiceList, 0); setTimeout(()=>{ loadVoices(); }, 1500);
+setTimeout(fillVoiceList, 0); { let n=0; const vt=setInterval(()=>{ loadVoices(); if(pickVoice()||++n>15) clearInterval(vt); }, 1000); }
 $('#bMusic').onclick=e=>{ audio(); MUS.on=!MUS.on; store.set('music',MUS.on); e.target.textContent='音樂：'+(MUS.on?'開':'關'); };
 $('#bMusic').textContent='音樂：'+(MUS.on?'開':'關');
 $('#bFull').onclick=fullscreen;
