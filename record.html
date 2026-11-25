@@ -172,7 +172,9 @@ $('#dl').onclick=async()=>{
   $('#msg').textContent=`已下載 ${done.length} 句錄音（save_lover_voice.zip）。`;
 };
 /* ---- automatic recording with the computer's Cantonese voices ---- */
-const isCanto = v => /zh[-_]HK|yue/i.test(v.lang) || /粵|粤|Cantonese|Hong Kong|香港/i.test(v.name);
+// Cantonese = language zh-HK / yue. "Hong Kong" in a name is not enough: Edge also has English (Hong Kong) voices.
+const isCanto = v => /^(zh[-_]HK|yue|zh[-_]yue)/i.test(v.lang) || (/^zh/i.test(v.lang) && /粵|粤|Cantonese/i.test(v.name));
+const shortName = v => { const n=v.name.replace(/^Microsoft\s+/,'').replace(/\s+Online.*$/,'').replace(/\s+-\s+.*$/,''); const g={HiuMaan:'女聲',HiuGaai:'女聲',WanLung:'男聲'}[n]; return '粵語 · '+n+(g?'（'+g+'）':''); };
 const PREF = { nar:/HiuMaan/i, you:/HiuMaan/i, warn:/HiuMaan/i, gm:/HiuGaai/i, op:/WanLung/i, medic:/WanLung/i, aed:/HiuGaai/i };
 const STYLE = { gm:{rate:0.95,pitch:1.1}, aed:{rate:0.92,pitch:0.9}, op:{rate:1.05,pitch:1}, nar:{rate:1,pitch:1}, medic:{rate:1,pitch:1}, you:{rate:1.08,pitch:1}, warn:{rate:1,pitch:1} };
 let voices=[], autoStop=false, autoBusy=false;
@@ -183,7 +185,7 @@ function buildVoiceSelects(){
   $('#autoGo').disabled=autoBusy;
   const keep={}; document.querySelectorAll('#vgrid select').forEach(s=>keep[s.dataset.role]=s.value);
   $('#vgrid').innerHTML = roles.map(r=>{ const pick = keep[r] || (vs.find(v=>PREF[r]&&PREF[r].test(v.name))||vs[0]).name;
-    return `<label>${ROLE[r]}<select data-role="${r}">${vs.map(v=>`<option${v.name===pick?' selected':''}>${esc(v.name)}</option>`).join('')}</select></label>`; }).join('');
+    return `<label>${ROLE[r]}<select data-role="${r}">${vs.map(v=>`<option value="${esc(v.name)}"${v.name===pick?' selected':''}>${esc(shortName(v))}</option>`).join('')}</select></label>`; }).join('');
 }
 function voiceFor(role){ const sel=document.querySelector(`#vgrid select[data-role="${role}"]`); return voices.find(v=>sel&&v.name===sel.value)||voices[0]; }
 function speakLine(x){ return new Promise(res=>{ const u=new SpeechSynthesisUtterance(x.text), v=voiceFor(x.who), st=STYLE[x.who]||{};

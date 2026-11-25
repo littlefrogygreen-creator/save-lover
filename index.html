@@ -494,7 +494,7 @@ let unlocked=false, VOICES=[];
 function loadVoices(){ try{ VOICES=speechSynthesis.getVoices()||[]; }catch(e){} fillVoiceList(); }
 /* Cantonese first. The best ones are Microsoft's "Natural" Hong Kong voices (Edge), then "Google 粵語（香港）" (Chrome, needs internet),
    then any other zh-HK / yue voice installed on the computer. The operator can also pick one by hand in the panel. */
-const isCanto = v => /zh[-_]HK|yue|zh[-_]yue/i.test(v.lang) || /粵|粤|Cantonese|Hong Kong|香港/i.test(v.name);
+const isCanto = v => /^(zh[-_]HK|yue|zh[-_]yue)/i.test(v.lang) || (/^zh/i.test(v.lang) && /粵|粤|Cantonese/i.test(v.name));   // not English (Hong Kong) voices
 function rankVoice(v){ return (isCanto(v)?100:0) + (/Natural/i.test(v.name)?20:0) + (/Online/i.test(v.name)?5:0) + (/Google/i.test(v.name)?10:0) + (/^zh/i.test(v.lang)?1:0); }
 function pickVoice(){
   const want=store.get('voiceName',''); const chosen=want && VOICES.find(v=>v.name===want && isCanto(v)); if(chosen) return chosen;
