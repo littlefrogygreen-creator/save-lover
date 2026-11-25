@@ -185,6 +185,14 @@ html,body{height:100%;margin:0;background:#0d0605;overflow:hidden;font-family:va
 #certStats b{display:block;font-size:40px;font-variant-numeric:tabular-nums;line-height:1.1}
 #certFoot{display:flex;justify-content:space-between;margin-top:28px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#9a6b10}
 #certSeal{position:absolute;left:14px;top:556px;width:120px;height:120px;border-radius:50%;background:#b3211f;color:#f8efd9;font-size:64px;font-weight:900;display:flex;align-items:center;justify-content:center;transform:rotate(-10deg);box-shadow:0 0 0 5px #f8efd9 inset,0 0 0 8px #b3211f inset}
+#cert.fail{background:radial-gradient(ellipse at 50% 40%,#2a2a2a,#0c0c0c)}
+#cert.fail #certCard{background:#e9e6df;box-shadow:0 0 0 6px #555, 0 0 0 14px #e9e6df, 0 0 0 18px #555, 0 30px 80px #000c;transform:rotate(-1.2deg)}
+#cert.fail #certText h2{color:#1c1c1c}
+#cert.fail #certText p b{color:#1c1c1c}
+#cert.fail #certPhoto{border-color:#555;filter:grayscale(1) contrast(1.1)}
+#cert.fail #certSeal{background:#1c1c1c;box-shadow:0 0 0 5px #e9e6df inset,0 0 0 8px #1c1c1c inset}
+#cert.fail #certText .cap,#cert.fail #certFoot{color:#666}
+#cert.fail #certStats div{border-top-color:#888}
 #cert.pose .done-only{display:none} #cert.done .pose-only{display:none} #cert.pose #certSeal{display:none}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:20}
 #toast{position:absolute;left:50%;top:190px;transform:translateX(-50%);background:#c96a00;color:#fff;padding:12px 26px;border-radius:999px;font-size:24px;font-weight:800;z-index:8;display:none;box-shadow:0 8px 30px #000a;white-space:nowrap}
@@ -393,10 +401,10 @@ html,body{height:100%;margin:0;background:#0d0605;overflow:hidden;font-family:va
     <div id="certPhoto"><video id="certVideo" muted playsinline></video><canvas id="certShot" width="1040" height="780"></canvas>
       <div id="certNoCam">Save Lover ✚</div><div id="certCount"></div></div>
     <div id="certText">
-      <div class="cap">嘉許狀 · CERTIFICATE OF A LIFESAVER</div>
-      <h2>救心英雄</h2>
+      <div class="cap" id="certCap">嘉許狀 · CERTIFICATE OF A LIFESAVER</div>
+      <h2 id="certTitle">救心英雄</h2>
       <p class="pose-only">恭喜你！<b>請望向鏡頭</b><small>Congratulations — look at the camera</small></p>
-      <p class="done-only">茲證明呢位茶客，喺 <span id="certDate"></span>，<br>用一雙手同一部 AED，救返外母一命。<small>With two hands and an AED, this person saved a life.</small></p>
+      <p class="done-only">茲證明呢位茶客，喺 <span id="certDate"></span>，<br><span id="certBody">用一雙手同一部 AED，救返外母一命。</span><small id="certEn">With two hands and an AED, this person saved a life.</small></p>
       <div id="certStats" class="done-only"></div>
       <div id="certFoot"><span>拍 · 叫 · 壓 · 電</span><span>Save Lover ✚</span></div>
     </div>
@@ -436,6 +444,7 @@ const CFG = {
   ambulanceMs: 240000,      // hard time limit of the rescue
   stopMs: 25000,            // nobody pushing for this long during CPR: the paramedics arrive and the round ends
   certMs: 14000,            // how long the certificate stays before the debrief
+  failTitle: '殺人兇手',     // title of the joke certificate when she is not saved
   aedPadsMs: 9000,          // the AED steps play by themselves: time given to stick the pads on
   aedAnalyseMs: 4000,       // 'analysing, do not touch'
   aedCountMs: 3000,         // 'stand clear' countdown before the automatic shock
@@ -1075,28 +1084,33 @@ function stats(){
     pause: (G.tShock&&G.tResume)? ((G.tResume-G.tShock)/1000).toFixed(1):null };
 }
 function ending(){
-  const st=stats(); G.state='ENDING'; let kind = (G.shocked && G.surv>=55 && st.good>=40) ? 'A' : (G.surv>=30 && st.n>=20) ? 'B' : 'C'; G.kind=kind;
+  const st=stats(); G.state='ENDING'; const kind = (G.shocked && G.surv>=55 && st.good>=40) ? 'A' : 'C'; G.kind=kind;   // two endings: saved (A) or not (C)
   music(kind==='A'?'win':'sad');
   $('#surv').style.display='none'; $('#clock').style.display='none';
   const L = {
     A:[['medic','「有返脈搏喇！你頭先嘅心外壓同電擊，救返佢一命。」','“We have a pulse! Your compressions and that shock saved her life.”'],
        ['nar','下個星期六，同一張枱。','The following Saturday. The same table.', ()=>{ tag('尾聲','EPILOGUE'); $('#gmLie').setAttribute('opacity',0); $('#gmSit').setAttribute('opacity',1); $('#gmSitBody').setAttribute('transform',''); }],
        ['gm','「今次等我斟茶畀你。」','“This time, let me pour the tea for you.”']],
-    B:[['medic','「我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。」','“We’ll take over. Your compressions bought time, but her heart has not found its rhythm.”'],
-       ['nar','外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。','She is taken to intensive care. The doctor says an earlier shock would have made a real difference.', ()=>tag('尾聲','EPILOGUE')]],
     C:[['medic','「我哋盡力喇…… 太遲喇。」','“We did everything we could… it was too late.”'],
        ['nar','下個星期六，張枱空咗一個位。','The following Saturday, one seat at the table is empty.', ()=>{ tag('尾聲','EPILOGUE'); $('#gmLie').setAttribute('opacity',0); }],
        ['nar','現實冇得重來。但喺呢度，你可以再試一次。','Real life has no second try. Here, you get one.']],
   }[kind];
-  say(L, ()=> kind==='A' ? cert(st) : debrief(kind, st));
+  say(L, ()=> cert(st, kind!=='A'));
 }
-/* ---------- certificate: only when she is saved ---------- */
-function cert(st){
-  G.state='CERT'; G.lastEvent=performance.now(); G.certSt=st; tag('',''); const el=$('#cert'); el.className='done'; el.style.display='flex';
+/* ---------- certificate: a hero's one when she is saved, a joke "killer" one when she is not ---------- */
+function sadTrombone(){ [392,370,349,330].forEach((f,i)=>beep(f, i<3?.32:.9, 'sawtooth', .12, i*.36)); }
+function cert(st, fail){
+  G.state='CERT'; G.lastEvent=performance.now(); G.certSt=st; G.certFail=!!fail; tag('',''); const el=$('#cert'); el.className='done'+(fail?' fail':''); el.style.display='flex';
+  $('#certCap').textContent = fail ? '證書（搞笑版）· JUST KIDDING' : '嘉許狀 · CERTIFICATE OF A LIFESAVER';
+  $('#certTitle').textContent = fail ? CFG.failTitle : '救心英雄';
+  $('#certBody').textContent = fail ? '眼白白睇住外母……冇救返佢。' : '用一雙手同一部 AED，救返外母一命。';
+  $('#certEn').textContent = fail ? '講笑㗎！真係遇到，肯出手已經好過乜都唔做。下次記住：拍、叫、壓、電。' : 'With two hands and an AED, this person saved a life.';
+  $('#certSeal').textContent = fail ? '兇' : '救';
   $('#certVideo').style.display='none'; $('#certShot').style.display = G.photo?'block':'none'; $('#certNoCam').style.display = G.photo?'none':'flex';
   const d=new Date(); $('#certDate').textContent = d.getFullYear()+' 年 '+(d.getMonth()+1)+' 月 '+d.getDate()+' 日';
   $('#certStats').innerHTML = `<div><b>${st.good}%</b>合格按壓</div><div><b>${st.avgRate||'–'}</b>每分鐘次數</div><div><b>${st.tShock!=null?st.tShock+' 秒':'–'}</b>倒地至電擊</div>`;
-  flash('#fff'); beep(880,.12); beep(1320,.2,'sine',.15,.14); speak('恭喜你，救返外母！你係救心英雄。','op');
+  if(fail) $('#certStats').innerHTML = `<div><b>${st.good}%</b>合格按壓</div><div><b>${st.n}</b>壓咗幾多下</div><div><b>${G.shocked?'有':'冇'}</b>用到 AED</div>`;
+  if(fail){ flash('#888'); sadTrombone(); } else { flash('#fff'); beep(880,.12); beep(1320,.2,'sine',.15,.14); speak('恭喜你，救返外母！你係救心英雄。','op'); }
   G.certT=setTimeout(()=>{ if(G.state==='CERT') endCert(); }, FAST?400:CFG.certMs);
 }
 function takePhoto(){
@@ -1115,7 +1129,7 @@ function snap(){
   $('#cert').className='done'; G.lastEvent=performance.now();
   G.certT=setTimeout(()=>{ if(G.state==='CERT') endCert(); }, FAST?400:CFG.certMs);
 }
-function endCert(){ clearTimeout(G.certT); $('#cert').style.display='none'; debrief('A', G.certSt); }
+function endCert(){ clearTimeout(G.certT); $('#cert').style.display='none'; debrief(G.certFail?'C':'A', G.certSt); }
 function debrief(kind, st){
   G.state='DEBRIEF'; G.lastEvent=performance.now();
   const head = { A:['你救返外母','She lives — because of you'], B:['你爭取到時間，但未夠','You bought time, but not enough'], C:['今次救唔到','Not this time'] }[kind];
