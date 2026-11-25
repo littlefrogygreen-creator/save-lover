@@ -36,6 +36,14 @@ main{max-width:900px;margin:0 auto;padding:12px max(5vw,16px) 60px;display:flex;
 .rec-btn{width:52px;height:52px;border-radius:50%;padding:0;background:var(--red);border-color:var(--red);color:#fff;font-size:20px}
 .rec .rec-btn{background:#222;border-color:#222}
 .play-btn{width:52px;height:52px;border-radius:50%;padding:0;font-size:18px}
+.auto{background:var(--card);border:2px solid var(--gold);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.auto h2{margin:0;font-size:22px}.auto p{margin:0}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.vgrid label{display:flex;flex-direction:column;gap:3px;font-size:14px;font-weight:700}
+.vgrid select{font-weight:400;font-size:15px;width:100%}
+.chk{display:flex;gap:8px;align-items:center;font-size:15px}.chk input{width:20px;height:20px}
+.arow{display:flex;flex-wrap:wrap;gap:8px}
+.astat{color:var(--muted);font-size:15px;min-height:1.5em}
 .note{background:var(--card);border:1px dashed var(--gold);border-radius:14px;padding:12px 16px;color:var(--ink);font-size:15px}
 @media(max-width:600px){.take{grid-template-columns:28px minmax(0,1fr)}.btns{grid-row:auto;grid-column:2}.txt{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.prog i{transition:none}}
@@ -51,7 +59,15 @@ main{max-width:900px;margin:0 auto;padding:12px max(5vw,16px) 60px;display:flex;
   <button class="primary" id="dl">下載全部錄音</button>
 </div></div>
 <main>
-  <div class="note">錄音小貼士：用電腦或手機嘅 Chrome／Edge／Safari；揀靜嘅地方，嘴離咪大約一個拳頭；講完停一秒先按停止，頭尾嘅靜音會自動剪走。每個角色最好由同一位組員錄。</div>
+  <section class="auto" aria-labelledby="autoH">
+    <h2 id="autoH">用電腦語音自動錄（唔使真人）</h2>
+    <p>用 <b>Microsoft Edge</b> 喺 <b>Windows 手提電腦</b>開呢頁。每個角色揀一把廣東話語音，按「開始自動錄」，彈出視窗揀<b>「整個螢幕」</b>，並剔選<b>「同時分享系統音訊」</b>。之後電腦會逐句讀出嚟並自動錄低，大約 4 分鐘。錄音期間唔好播其他聲、唔好調低音量。</p>
+    <div class="vgrid" id="vgrid"></div>
+    <label class="chk"><input type="checkbox" id="onlyNew" checked> 只錄未錄嘅句子</label>
+    <div class="arow"><button class="primary" id="autoGo">開始自動錄</button><button id="autoStop" disabled>停止</button><button id="autoTest">試聽語音</button></div>
+    <p class="astat" id="astat" role="status"></p>
+  </section>
+  <div class="note">真人錄音小貼士：用電腦或手機嘅 Chrome／Edge／Safari；揀靜嘅地方，嘴離咪大約一個拳頭；講完停一秒先按停止，頭尾嘅靜音會自動剪走。每個角色最好由同一位組員錄。</div>
   <div id="list"></div>
   <p class="tips" id="msg" role="status"></p>
 </main>
@@ -155,6 +171,53 @@ $('#dl').onclick=async()=>{
   a.href=URL.createObjectURL(blob); a.download='save_lover_voice.zip'; document.body.appendChild(a); a.click(); a.remove();
   $('#msg').textContent=`已下載 ${done.length} 句錄音（save_lover_voice.zip）。`;
 };
+/* ---- automatic recording with the computer's Cantonese voices ---- */
+const isCanto = v => /zh[-_]HK|yue/i.test(v.lang) || /粵|粤|Cantonese|Hong Kong|香港/i.test(v.name);
+const PREF = { nar:/HiuMaan/i, you:/HiuMaan/i, warn:/HiuMaan/i, gm:/HiuGaai/i, op:/WanLung/i, medic:/WanLung/i, aed:/HiuGaai/i };
+const STYLE = { gm:{rate:0.95,pitch:1.1}, aed:{rate:0.92,pitch:0.9}, op:{rate:1.05,pitch:1}, nar:{rate:1,pitch:1}, medic:{rate:1,pitch:1}, you:{rate:1.08,pitch:1}, warn:{rate:1,pitch:1} };
+let voices=[], autoStop=false, autoBusy=false;
+function cantoVoices(){ try{ voices=speechSynthesis.getVoices().filter(isCanto); }catch(e){ voices=[]; } return voices; }
+function buildVoiceSelects(){
+  const vs=cantoVoices(), roles=Object.keys(ROLE).filter(k=>items.some(x=>x.who===k));
+  if(!vs.length){ $('#vgrid').innerHTML='<p>呢個瀏覽器搵唔到廣東話語音。請用 Windows 嘅 Microsoft Edge 開呢頁。</p>'; $('#autoGo').disabled=true; return; }
+  $('#autoGo').disabled=autoBusy;
+  const keep={}; document.querySelectorAll('#vgrid select').forEach(s=>keep[s.dataset.role]=s.value);
+  $('#vgrid').innerHTML = roles.map(r=>{ const pick = keep[r] || (vs.find(v=>PREF[r]&&PREF[r].test(v.name))||vs[0]).name;
+    return `<label>${ROLE[r]}<select data-role="${r}">${vs.map(v=>`<option${v.name===pick?' selected':''}>${esc(v.name)}</option>`).join('')}</select></label>`; }).join('');
+}
+function voiceFor(role){ const sel=document.querySelector(`#vgrid select[data-role="${role}"]`); return voices.find(v=>sel&&v.name===sel.value)||voices[0]; }
+function speakLine(x){ return new Promise(res=>{ const u=new SpeechSynthesisUtterance(x.text), v=voiceFor(x.who), st=STYLE[x.who]||{};
+  if(v){ u.voice=v; u.lang=v.lang; } u.rate=st.rate||1; u.pitch=st.pitch||1;
+  let done=false; const fin=()=>{ if(!done){ done=true; res(); } }; u.onend=fin; u.onerror=fin; setTimeout(fin, 25000);
+  speechSynthesis.cancel(); setTimeout(()=>speechSynthesis.speak(u), 60); }); }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+$('#autoTest').onclick=()=>{ cantoVoices(); const x=items.find(i=>i.who==='op')||items[0]; speakLine(x); };
+$('#autoStop').onclick=()=>{ autoStop=true; speechSynthesis.cancel(); $('#astat').textContent='停緊……'; };
+$('#autoGo').onclick=async()=>{
+  if(rec) await stop();
+  cantoVoices(); if(!voices.length) return;
+  let disp;
+  try{ disp=await navigator.mediaDevices.getDisplayMedia({ video:true, audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}, systemAudio:'include' }); }
+  catch(e){ $('#astat').textContent='未開始：要喺彈出視窗揀「整個螢幕」再按分享。'; return; }
+  const at=disp.getAudioTracks()[0];
+  if(!at){ disp.getTracks().forEach(t=>t.stop()); $('#astat').textContent='收唔到電腦聲音：請揀「整個螢幕」，並剔選「同時分享系統音訊」。Mac 可能冇呢個選項，要用 Windows 電腦。'; return; }
+  ac = ac || new (window.AudioContext||window.webkitAudioContext)(); if(ac.state!=='running') await ac.resume();
+  const astream=new MediaStream([at]); autoStop=false; autoBusy=true; $('#autoGo').disabled=true; $('#autoStop').disabled=false;
+  const todo=items.filter(x=>!$('#onlyNew').checked || !takes[x.id]); let ok=0, bad=0;
+  for(let k=0;k<todo.length && !autoStop;k++){ const x=todo[k];
+    recId=x.id; render(); document.getElementById('t-'+x.id)?.scrollIntoView({block:'center',behavior:'smooth'});
+    $('#astat').textContent=`錄緊第 ${k+1} / ${todo.length} 句……`;
+    const ch=[], mr=new MediaRecorder(astream); mr.ondataavailable=e=>{ if(e.data.size) ch.push(e.data); };
+    const stopped=new Promise(r=>mr.onstop=r); mr.start(); await sleep(300); await speakLine(x); await sleep(400); mr.stop(); await stopped;
+    try{ const buf=await ac.decodeAudioData(await new Blob(ch).arrayBuffer()); const wav=await toWav(buf);
+      if(wav.dur>0.4){ takes[x.id]={blob:wav.blob,dur:wav.dur}; saveTake(x.id,takes[x.id]); ok++; } else bad++;
+    }catch(e){ bad++; }
+  }
+  recId=null; autoBusy=false; disp.getTracks().forEach(t=>t.stop()); $('#autoGo').disabled=false; $('#autoStop').disabled=true; render();
+  $('#astat').textContent = `完成：錄好 ${ok} 句`+(bad?`，${bad} 句錄唔到聲（可能冇剔「分享系統音訊」或者音量太細），可以再按一次只補錄未錄嘅句子。`:'。')+' 跟住按上面「下載全部錄音」。';
+};
+try{ speechSynthesis.addEventListener('voiceschanged', buildVoiceSelects); }catch(e){}
+setTimeout(buildVoiceSelects, 0); setTimeout(buildVoiceSelects, 1500);
 openDB().then(loadTakes).then(render);
 }
 </script></body></html>
