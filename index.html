@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Save Lover 愛心救援</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* Save Lover — 2D game. Single file, no network needed. Open in Chrome/Edge (Web Serial). */
+:root{
+  --red:#b3211f; --red-d:#7c1413; --gold:#e9b949; --cream:#f6ead0; --wood:#4a2416;
+  --ink:#1c0f0b; --jade:#2fa37c; --warn:#ff9f1c; --bad:#ff4d4d; --panel:rgba(22,10,8,.88);
+  --font:"Noto Sans TC","PingFang HK","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0d0605;overflow:hidden;font-family:var(--font);color:var(--cream)}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{width:1600px;height:900px;position:relative;transform-origin:center;overflow:hidden;background:#2a100c;flex:none}
+#scene{position:absolute;inset:0;width:100%;height:100%}
+.dim #scene{filter:brightness(.38) saturate(.8)}
+#scene{transition:filter .5s}
+
+/* top bar */
+#topbar{position:absolute;left:0;right:0;top:0;height:74px;display:flex;align-items:center;gap:24px;padding:0 28px;
+  background:linear-gradient(#1a0907ee,#1a090700);z-index:5}
+#sceneTag{font-size:24px;font-weight:700;letter-spacing:.06em;color:var(--gold)}
+#sceneTag small{display:block;font-size:13px;font-weight:400;color:#e8d6b0;letter-spacing:.08em;opacity:.85}
+#logo{margin-left:auto;font-weight:900;font-size:22px;letter-spacing:.04em}
+#logo b{color:#ff5a50}
+#surv{width:400px;display:none}
+#surv .lab{display:flex;justify-content:space-between;font-size:14px;letter-spacing:.06em;margin-bottom:5px}
+#surv .lab b{font-size:20px;font-variant-numeric:tabular-nums}
+#surv .bar{height:14px;background:#00000080;border:1px solid #ffffff30;border-radius:8px;overflow:hidden}
+#surv .bar i{display:block;height:100%;width:80%;background:linear-gradient(90deg,#ff4d4d,#ffb347 45%,#49d39a);background-size:400px 100%;transition:width .3s}
+#clock{font-variant-numeric:tabular-nums;font-size:20px;display:none;min-width:150px}
+#clock small{display:block;font-size:12px;opacity:.75;letter-spacing:.08em}
+
+/* title / attract */
+#title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:6;
+  background:radial-gradient(ellipse at 50% 40%,#3b0f0cb0,#120504f2)}
+#title h1{font-size:120px;margin:0;letter-spacing:.08em;font-weight:900;text-shadow:0 6px 0 #00000060}
+#title h1 span{color:#ff5a50}
+#title h2{font-size:30px;font-weight:500;margin:6px 0 0;letter-spacing:.3em;color:var(--gold)}
+#title .en{font-size:17px;letter-spacing:.34em;opacity:.8;margin-top:10px}
+#startCue{margin-top:56px;display:flex;align-items:center;gap:22px;padding:22px 40px;border:2px solid var(--gold);border-radius:999px;
+  font-size:32px;font-weight:700;animation:breathe 2.2s infinite}
+#startCue small{display:block;font-size:15px;font-weight:400;opacity:.8;letter-spacing:.05em}
+#startCue svg{width:60px;height:60px}
+@keyframes breathe{50%{box-shadow:0 0 0 14px #e9b94922;transform:scale(1.02)}}
+#homeCheck{margin-top:28px;font-size:16px;color:#ffb347;min-height:24px}
+#modeRow{margin-top:26px;display:flex;gap:12px}
+.pill{font:inherit;color:var(--cream);background:#ffffff14;border:1px solid #ffffff40;border-radius:999px;padding:9px 20px;font-size:16px;cursor:pointer}
+.pill.on{background:var(--gold);color:#2a1206;border-color:var(--gold);font-weight:700}
+.pill:focus-visible{outline:3px solid #fff}
+
+/* objective */
+#objective{position:absolute;left:50%;top:96px;transform:translateX(-50%);display:none;align-items:center;gap:20px;z-index:5;
+  background:var(--panel);border:2px solid var(--gold);border-radius:22px;padding:16px 30px 16px 20px;max-width:1100px;box-shadow:0 10px 40px #000a}
+#objective svg{width:70px;height:70px;flex:none}
+#objective .zh{font-size:32px;font-weight:800;line-height:1.25}
+#objective .en{font-size:16px;opacity:.8;margin-top:3px}
+#objective .ring{width:64px;height:64px;flex:none;display:none}
+
+/* dialogue */
+#dialog{position:absolute;left:120px;right:120px;bottom:36px;min-height:150px;background:var(--panel);border:2px solid #e9b94990;border-radius:20px;
+  padding:20px 30px 22px;z-index:7;display:none;box-shadow:0 10px 40px #000a}
+#dialog .who{display:inline-block;background:var(--red);color:#fff;font-weight:800;font-size:18px;padding:4px 16px;border-radius:999px;margin-bottom:8px;letter-spacing:.08em}
+#dialog .who.aed{background:#1f8a5f}#dialog .who.op{background:#2b62c9}#dialog .who.nar{background:#5c4a3c}#dialog .who.warn{background:#c96a00}
+#dialog .zh{font-size:32px;line-height:1.4;font-weight:600}
+#dialog .en{font-size:17px;opacity:.75;margin-top:6px;line-height:1.4}
+
+/* CPR HUD */
+#cpr{position:absolute;left:60px;right:60px;top:210px;bottom:210px;display:none;gap:26px;z-index:5}
+.card{background:var(--panel);border:1px solid #ffffff2e;border-radius:20px;padding:18px 22px;display:flex;flex-direction:column}
+.card h3{margin:0 0 8px;font-size:17px;letter-spacing:.12em;color:var(--gold);font-weight:700}
+.card h3 small{font-weight:400;opacity:.75;margin-left:8px;letter-spacing:.06em}
+#cardPos{width:330px}#cardBeat{flex:1;align-items:center}#cardDepth{width:230px}#cardPosture{width:300px}
+.torso{width:100%;flex:1;min-height:0}
+#posMsg{font-size:20px;font-weight:700;text-align:center;min-height:28px}
+#beatWrap{position:relative;width:250px;height:250px;margin-top:4px}
+#beatRing{position:absolute;inset:0;border-radius:50%;border:10px solid #ffffff22}
+#beatPulse{position:absolute;inset:26px;border-radius:50%;background:radial-gradient(#ff7b6b,#b3211f);transform:scale(.6);opacity:.9}
+#beatNum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:92px;font-weight:900;font-variant-numeric:tabular-nums;text-shadow:0 3px 0 #0008}
+#beatNum small{font-size:20px;font-weight:500;opacity:.85;margin-top:-10px}
+#coach{font-size:36px;font-weight:900;margin-top:10px;min-height:50px;text-align:center}
+#coach.ok{color:#5fe0aa}#coach.no{color:#ffb347}
+#rateRow{display:flex;gap:26px;align-items:baseline;font-size:17px;margin-top:2px}
+#rateRow b{font-size:38px;font-variant-numeric:tabular-nums}
+#depthGauge{position:relative;flex:1;margin:4px 34px 4px 64px;background:#0008;border:1px solid #ffffff30;border-radius:12px;min-height:0}
+#depthBand{position:absolute;left:0;right:0;background:#2fa37c66;border-top:2px solid #5fe0aa;border-bottom:2px solid #5fe0aa}
+#depthFill{position:absolute;left:0;right:0;top:0;background:linear-gradient(#ffffff30,#ffffff70);border-radius:12px 12px 0 0}
+#depthPeak{position:absolute;left:-8px;right:-8px;height:4px;background:#fff;border-radius:2px}
+.tick{position:absolute;left:-58px;font-size:14px;opacity:.8;transform:translateY(-50%);font-variant-numeric:tabular-nums}
+#contactBox{flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+#lamp{width:120px;height:120px;border-radius:50%;background:#ffffff14;border:6px solid #ffffff30;transition:background .08s,border-color .08s}
+#lamp.on{background:#5fe0aa;border-color:#b8ffe0;box-shadow:0 0 40px #5fe0aa}
+#lampTxt{font-size:30px;font-weight:900}#lampTxt.on{color:#5fe0aa}
+#contactBox small{font-size:15px;opacity:.75}
+#lampCount{font-size:18px;font-variant-numeric:tabular-nums;opacity:.9}
+.depthContact #depthGauge,.depthContact #depthVal{display:none!important}
+.depthContact #contactBox{display:flex}
+#depthVal{text-align:center;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+#cardPosture ul{margin:6px 0 0;padding:0;list-style:none;font-size:18px;line-height:1.5}
+#cardPosture li{padding-left:26px;position:relative;margin-bottom:5px}
+#cardPosture li:before{content:"";position:absolute;left:4px;top:.55em;width:10px;height:10px;border-radius:50%;background:var(--gold)}
+#cardPosture li small{display:block;font-size:13px;opacity:.7;line-height:1.3}
+
+/* AED panel */
+#aed{position:absolute;left:150px;right:150px;top:200px;bottom:206px;display:none;gap:26px;z-index:5}
+#aedDev{flex:1;background:linear-gradient(#f3f0e6,#d9d4c4);color:#1b1b1b;border-radius:26px;border:6px solid #1f8a5f;padding:22px 30px;display:flex;flex-direction:column}
+#aedDev h3{margin:0;font-size:20px;letter-spacing:.2em;color:#1f8a5f}
+#aedLcd{background:#10231b;color:#8dffc8;border-radius:12px;padding:16px 20px;margin:12px 0;font-size:32px;font-weight:800;min-height:96px;line-height:1.3}
+#aedLcd small{display:block;font-size:16px;font-weight:400;color:#bfe9d5;margin-top:4px}
+#aedSteps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:auto}
+#aedSteps div{border:2px solid #0002;border-radius:14px;padding:10px 12px;font-size:17px;font-weight:700;background:#fff8;opacity:.45}
+#aedSteps div b{display:block;font-size:13px;font-weight:500;letter-spacing:.06em}
+#aedSteps div.now{opacity:1;border-color:#1f8a5f;background:#fff}
+#aedSteps div.done{opacity:1;background:#bfe9d5;border-color:#1f8a5f}
+#shockBtn{align-self:center;width:120px;height:120px;border-radius:50%;background:#ff8a1c;border:8px solid #b55200;display:flex;align-items:center;justify-content:center;margin-bottom:8px;opacity:.35}
+#shockBtn svg{width:60px;height:60px}
+#shockBtn.arm{opacity:1;animation:blink .5s infinite}
+@keyframes blink{50%{background:#ffd08a;box-shadow:0 0 40px #ff8a1c}}
+#aedBody{width:400px}
+#clearStat{display:none;align-self:center;font-size:28px;font-weight:900;padding:8px 24px;border-radius:999px;margin-bottom:8px}
+#clearStat.ok{display:block;background:#1f8a5f;color:#fff}#clearStat.bad{display:block;background:#c0271e;color:#fff;animation:blink .5s infinite}
+
+/* debrief */
+#debrief{position:absolute;inset:0;background:#140706f6;z-index:9;display:none;padding:34px 60px;overflow:hidden}
+#debrief h2{font-size:44px;margin:0;font-weight:900}
+#debrief h2 small{font-size:18px;font-weight:400;opacity:.75;margin-left:14px;letter-spacing:.1em}
+#debrief .sub{font-size:20px;margin:6px 0 18px;color:var(--gold)}
+#dbGrid{display:grid;grid-template-columns:1.15fr 1fr;gap:26px;height:650px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;background:#ffffff0f;border-radius:14px;padding:10px 16px;font-size:20px;font-weight:700}
+.steps li small{display:block;font-size:14.5px;font-weight:400;opacity:.8;line-height:1.35;margin-top:2px}
+.mark{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:#140706}
+.mark.ok{background:#5fe0aa}.mark.mid{background:#ffb347}.mark.no{background:#ff6b6b}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:#ffffff0f;border-radius:14px;padding:12px 14px}
+.tile b{display:block;font-size:34px;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile span{font-size:14px;opacity:.8}
+.tile.ok b{color:#5fe0aa}.tile.no b{color:#ffb347}
+#dbTake{margin-top:14px;background:var(--red-d);border-radius:16px;padding:16px 20px;font-size:19px;line-height:1.5}
+#dbTake b{color:var(--gold)}
+#dbAed{margin-top:12px;border:2px dashed #e9b94990;border-radius:16px;padding:14px 20px;font-size:17px;line-height:1.5}
+#dbFoot .staff{color:#ffb347}
+#dbFoot{position:absolute;left:60px;right:60px;bottom:26px;display:flex;justify-content:space-between;font-size:17px;opacity:.85}
+
+/* posture briefing */
+#brief{position:absolute;left:60px;right:60px;top:200px;bottom:200px;z-index:6;display:none;flex-direction:column;gap:18px;background:var(--panel);border:2px solid var(--gold);border-radius:24px;padding:24px 30px}
+#brief h2{margin:0;font-size:36px;font-weight:900}#brief h2 small{font-size:16px;font-weight:400;opacity:.7;margin-left:12px;letter-spacing:.12em}
+#briefSteps{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;min-height:0}
+.bs{border:2px solid #ffffff25;border-radius:18px;padding:14px 18px;display:flex;flex-direction:column;gap:4px;opacity:.4;transition:opacity .3s,border-color .3s,transform .3s}
+.bs svg{width:100%;height:150px}
+.bs b{font-size:27px;line-height:1.3}.bs span{font-size:19px}.bs small{font-size:14px;opacity:.7}
+.bs.on{opacity:1;border-color:var(--gold);transform:translateY(-4px)}.bs.seen{opacity:1}
+#briefFoot{font-size:20px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+#briefGo{font-size:30px;color:#5fe0aa}
+/* start photo */
+#photo{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;gap:60px;background:#140504f4}
+#photoFrame{width:720px;height:540px;position:relative;border:10px solid #c99a2e;background:#000;overflow:hidden}
+#photoVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#photoCount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:220px;font-weight:900;color:#fff;text-shadow:0 6px 30px #000}
+#photoText{display:flex;flex-direction:column;gap:10px;max-width:520px}
+#photoText b{font-size:64px;color:var(--gold)}
+#photoText span{font-size:36px;font-weight:700}
+#photoText small{font-size:18px;opacity:.7}
+/* certificate */
+#cert{position:absolute;inset:0;z-index:9;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#5a1512,#140504)}
+#certCard{width:1360px;height:720px;background:#f8efd9;color:#2a1206;border-radius:10px;padding:44px;display:flex;gap:44px;position:relative;
+  box-shadow:0 0 0 6px #c99a2e, 0 0 0 14px #f8efd9, 0 0 0 18px #c99a2e, 0 30px 80px #000c}
+#certPhoto{width:620px;height:465px;background:#000;position:relative;flex:none;align-self:center;border:8px solid #c99a2e;overflow:hidden}
+#certVideo,#certShot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#certVideo{transform:scaleX(-1)} #certShot{display:none}
+#certNoCam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ffffff40;font-size:20px;letter-spacing:.3em}
+#certCount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:240px;font-weight:900;color:#fff;text-shadow:0 6px 30px #000}
+#cert.done #certCount{display:none}
+#certText{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
+#certText .cap{font-size:17px;letter-spacing:.24em;color:#9a6b10;font-weight:700}
+#certText h2{font-size:128px;margin:6px 0 10px;font-weight:900;color:#b3211f;letter-spacing:.06em;line-height:1.05}
+#certText p{font-size:30px;line-height:1.5;margin:0;font-weight:600}
+#certText p b{color:#b3211f;font-size:44px;display:block}
+#certText p small{display:block;font-size:17px;font-weight:400;opacity:.7;margin-top:6px}
+#certStats{display:flex;gap:14px;margin-top:22px}
+#certStats div{flex:1;border-top:3px solid #c99a2e;padding-top:8px;font-size:16px}
+#certStats b{display:block;font-size:40px;font-variant-numeric:tabular-nums;line-height:1.1}
+#certFoot{display:flex;justify-content:space-between;margin-top:28px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#9a6b10}
+#certSeal{position:absolute;left:14px;top:556px;width:120px;height:120px;border-radius:50%;background:#b3211f;color:#f8efd9;font-size:64px;font-weight:900;display:flex;align-items:center;justify-content:center;transform:rotate(-10deg);box-shadow:0 0 0 5px #f8efd9 inset,0 0 0 8px #b3211f inset}
+#cert.pose .done-only{display:none} #cert.done .pose-only{display:none} #cert.pose #certSeal{display:none}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:20}
+#toast{position:absolute;left:50%;top:190px;transform:translateX(-50%);background:#c96a00;color:#fff;padding:12px 26px;border-radius:999px;font-size:24px;font-weight:800;z-index:8;display:none;box-shadow:0 8px 30px #000a;white-space:nowrap}
+
+/* operator / simulation panel (not scaled) */
+#simBtn{position:fixed;right:6px;bottom:6px;z-index:51;opacity:.25;width:30px;height:30px;padding:0;font-size:15px;display:flex;align-items:center;justify-content:center}
+#simBtn:hover{opacity:1}
+#sim.open{display:block!important}
+#sim{position:fixed;right:10px;bottom:44px;width:380px;max-height:calc(100% - 70px);overflow:auto;background:#101010f2;color:#eee;border:1px solid #555;border-radius:12px;padding:12px 14px;z-index:50;font-size:13px;display:none}
+#sim h4{margin:10px 0 6px;font-size:12px;letter-spacing:.12em;color:#e9b949}
+#sim .row{display:flex;flex-wrap:wrap;gap:6px}
+#sim button{font:inherit;background:#2a2a2a;color:#eee;border:1px solid #666;border-radius:8px;padding:6px 9px;cursor:pointer}
+#sim button.on{background:#2fa37c;border-color:#2fa37c;color:#04130d}
+#sim button:active{background:#555}
+#sim kbd{background:#000;border:1px solid #555;border-radius:4px;padding:0 4px;font-size:11px;margin-left:4px}
+#raw{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;white-space:pre;background:#000;border-radius:8px;padding:8px;margin-top:6px;line-height:1.45}
+#simHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#simHead #serState{flex:1}
+#sim button.press{background:#7c1413;border-color:#b3211f;touch-action:none;user-select:none;-webkit-user-select:none}
+#sim button.press.on{background:#2fa37c}
+#sim.mini .full{display:none}
+#sim.open.mini{display:flex!important;align-items:center;gap:6px;left:auto;right:42px;max-width:calc(100% - 50px);bottom:6px;width:auto;max-height:none;padding:4px 6px;overflow-x:auto;overflow-y:hidden;background:#101010cc;font-size:11px;border-radius:8px}
+#sim.mini #simHead{order:2;flex:none;flex-wrap:nowrap;gap:4px}
+#sim.mini #simHead b,#sim.mini #serState{display:none}
+#sim.mini .row{flex-wrap:nowrap;gap:4px}
+#sim.mini button{padding:3px 7px;font-size:11px;white-space:nowrap;border-radius:6px}
+#sim.mini kbd{display:none}
+@media (max-width:900px), (max-height:520px){
+  #sim{left:6px;right:6px;width:auto;bottom:40px;max-height:46vh;font-size:12px;padding:8px 10px;background:#101010e0}
+  #sim button{padding:5px 8px}
+  #sim h4{margin:6px 0 4px}
+  #raw{font-size:10px;padding:6px}
+}
+#sim label{display:flex;align-items:center;gap:8px;margin-top:6px}
+#sim input[type=range]{flex:1}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+
+<!-- ===== SCENE (replace with your own renders: see ASSETS in script) ===== -->
+<svg id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <pattern id="carpet" width="120" height="80" patternUnits="userSpaceOnUse">
+      <rect width="120" height="80" fill="#9b1c1a"/>
+      <path d="M60 8 L98 40 L60 72 L22 40Z" fill="none" stroke="#d9a441" stroke-width="3" opacity=".55"/>
+      <circle cx="60" cy="40" r="7" fill="#d9a441" opacity=".6"/>
+      <circle cx="0" cy="0" r="5" fill="#d9a441" opacity=".4"/><circle cx="120" cy="0" r="5" fill="#d9a441" opacity=".4"/>
+      <circle cx="0" cy="80" r="5" fill="#d9a441" opacity=".4"/><circle cx="120" cy="80" r="5" fill="#d9a441" opacity=".4"/>
+    </pattern>
+    <pattern id="lattice" width="46" height="46" patternUnits="userSpaceOnUse">
+      <rect width="46" height="46" fill="#2b130c"/>
+      <path d="M0 23H46M23 0V46M8 8h30v30H8z" fill="none" stroke="#7a4326" stroke-width="4"/>
+    </pattern>
+    <linearGradient id="wallg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9c08e"/><stop offset="1" stop-color="#f0deb6"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#ffd27a" stop-opacity=".7"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="420" fill="url(#wallg)"/>
+  <rect y="330" width="1600" height="120" fill="#5a2c1a"/><rect y="330" width="1600" height="10" fill="#7a4326"/>
+  <rect x="540" y="60" width="520" height="300" fill="url(#lattice)" stroke="#3a1a0f" stroke-width="14"/>
+  <circle cx="800" cy="210" r="112" fill="#f0deb6" stroke="#3a1a0f" stroke-width="12"/>
+  <path d="M740 250q30-90 70-70t50 60M770 200q-20-30 10-50" fill="none" stroke="#7c1413" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="790" cy="160" r="9" fill="#b3211f"/><circle cx="842" cy="196" r="7" fill="#b3211f"/><circle cx="760" cy="222" r="6" fill="#b3211f"/>
+  <g fill="#3a1a0f"><rect x="150" y="90" width="150" height="190"/><rect x="1300" y="90" width="150" height="190"/></g>
+  <rect x="162" y="102" width="126" height="166" fill="#e9dcc0"/><rect x="1312" y="102" width="126" height="166" fill="#e9dcc0"/>
+  <path d="M180 240q40-90 90-20M1330 230q30-70 90 10" stroke="#5a6b4a" stroke-width="5" fill="none"/>
+  <!-- AED sign on wall -->
+  <g transform="translate(1180,120)"><rect width="78" height="96" rx="8" fill="#1f8a5f"/><path d="M39 30c-14-18-34 0-18 18l18 18 18-18c16-18-4-36-18-18z" fill="#fff"/><path d="M42 36l-10 14h8l-4 12 12-16h-8z" fill="#1f8a5f"/><text x="39" y="88" text-anchor="middle" font-size="20" font-weight="800" fill="#fff" font-family="sans-serif">AED</text></g>
+  <g><circle cx="330" cy="40" r="130" fill="url(#glow)"/><circle cx="1270" cy="40" r="130" fill="url(#glow)"/>
+    <path d="M330 0v30M1270 0v30" stroke="#3a1a0f" stroke-width="4"/>
+    <ellipse cx="330" cy="62" rx="40" ry="34" fill="#c22b22"/><ellipse cx="1270" cy="62" rx="40" ry="34" fill="#c22b22"/>
+    <rect x="312" y="26" width="36" height="8" fill="#d9a441"/><rect x="1252" y="26" width="36" height="8" fill="#d9a441"/>
+    <rect x="312" y="92" width="36" height="8" fill="#d9a441"/><rect x="1252" y="92" width="36" height="8" fill="#d9a441"/></g>
+  <rect y="420" width="1600" height="480" fill="url(#carpet)"/>
+  <rect y="420" width="1600" height="480" fill="#000" opacity=".12"/>
+  <!-- background tables -->
+  <g opacity=".9"><ellipse cx="170" cy="450" rx="190" ry="40" fill="#f4efe4"/><path d="M-20 450q190 70 380 0v70q-190 60-380 0z" fill="#e3dccb"/>
+    <ellipse cx="1470" cy="452" rx="190" ry="40" fill="#f4efe4"/><path d="M1280 452q190 70 380 0v70q-190 60-380 0z" fill="#e3dccb"/></g>
+  <!-- grandma seated (behind table) -->
+  <g id="gmSit" transform="translate(520,250)">
+    <g id="gmSitBody">
+      <path d="M-70 250q-6-150 70-160q76 10 70 160z" fill="#7d8a93"/>
+      <path d="M-18 96h36l-6 34h-24z" fill="#e7c3a4"/>
+      <ellipse cx="0" cy="52" rx="46" ry="52" fill="#e7c3a4"/>
+      <path d="M-48 46q-6-62 48-62q54 0 48 62q-16-40-48-40t-48 40z" fill="#d9d9d9"/><circle cx="0" cy="-22" r="22" fill="#d9d9d9"/>
+      <path d="M-20 54q6-6 12 0M8 54q6-6 12 0" stroke="#3a2a22" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path id="gmMouth" d="M-12 78q12 10 24 0" stroke="#8a3b34" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path id="gmArm" d="M40 140q46 30 20 90" stroke="#7d8a93" stroke-width="30" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+  <!-- chairs + main table -->
+  <g fill="#8e2420" stroke="#5a1210" stroke-width="4">
+    <path d="M250 380h80v190h-80zM258 360h64q10 0 10 20h-84q0-20 10-20z"/>
+    <path d="M720 380h80v190h-80zM728 360h64q10 0 10 20h-84q0-20 10-20z"/>
+  </g>
+  <ellipse cx="520" cy="505" rx="290" ry="62" fill="#e3c95a"/>
+  <path d="M230 505q290 110 580 0v130q-290 100-580 0z" fill="#cdb244"/>
+  <ellipse cx="520" cy="500" rx="180" ry="34" fill="#f4efe4" opacity=".9"/>
+  <g id="teapot" transform="translate(600,470)"><ellipse cx="0" cy="8" rx="34" ry="24" fill="#f7f7f2" stroke="#b9b6a8" stroke-width="3"/><path d="M30 2q26-6 30-22" stroke="#b9b6a8" stroke-width="8" fill="none"/><path d="M-32 0q-22 6-10 22" stroke="#b9b6a8" stroke-width="6" fill="none"/><ellipse cx="0" cy="-16" rx="14" ry="5" fill="#b9b6a8"/></g>
+  <g fill="#c8a36a" stroke="#8a6a3a" stroke-width="3"><ellipse cx="440" cy="488" rx="40" ry="14"/><rect x="400" y="466" width="80" height="22" rx="4"/><ellipse cx="440" cy="466" rx="40" ry="12" fill="#e2c38d"/></g>
+  <g fill="#fff" stroke="#b9b6a8" stroke-width="2"><ellipse cx="520" cy="512" rx="16" ry="7"/><ellipse cx="660" cy="508" rx="16" ry="7"/></g>
+  <!-- grandma lying on the carpet -->
+  <g id="gmLie" transform="translate(890,652)" opacity="0">
+    <ellipse cx="170" cy="50" rx="330" ry="26" fill="#000" opacity=".28"/>
+    <path d="M40 -34h300q60 6 70 34q-10 30-70 34h-300q-34-34 0-68z" fill="#7d8a93"/>
+    <path d="M410 -18h70v36h-70z" fill="#5f6a72"/><ellipse cx="492" cy="0" rx="20" ry="20" fill="#3a2a22"/>
+    <path d="M120 -40q60-30 120 0" stroke="#7d8a93" stroke-width="26" fill="none" stroke-linecap="round"/>
+    <ellipse cx="-14" cy="0" rx="50" ry="46" fill="#e7c3a4"/>
+    <path d="M-58 -18q-22 18 0 40q-14-20 0-40z" fill="#d9d9d9"/><path d="M-44 -34q-40 34 0 68q-30-34 0-68z" fill="#d9d9d9"/><circle cx="-68" cy="0" r="18" fill="#d9d9d9"/>
+    <path d="M-4 -18q6 6 0 12M-4 8q6 6 0 12" stroke="#3a2a22" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <g id="aedPadsScene" opacity="0"><rect x="96" y="-30" width="50" height="34" rx="6" fill="#fff" stroke="#1f8a5f" stroke-width="4"/><rect x="190" y="2" width="50" height="34" rx="6" fill="#fff" stroke="#1f8a5f" stroke-width="4"/></g>
+  </g>
+</svg>
+
+<div id="topbar">
+  <div id="sceneTag"></div>
+  <div id="surv"><div class="lab"><span>存活機會 SURVIVAL CHANCE</span><b id="survNum">85%</b></div><div class="bar"><i id="survBar"></i></div></div>
+  <div id="clock"><span id="clockNum">00:00</span><small>倒地後 SINCE COLLAPSE</small></div>
+  <div id="logo">Save <b>Lover ✚</b></div>
+</div>
+
+<div id="title">
+  <h1>愛心救援<span>✚</span></h1>
+  <h2>學會急救，守護身邊人</h2>
+  <div class="en">SAVE LOVER · LEARN FIRST AID, SAVE A LIFE</div>
+  <div id="startCue"><span id="cueIcon"></span><div>拎起茶壺，為外母斟茶<small>Lift the teapot to pour tea for your mother-in-law</small></div></div>
+  <div id="homeCheck"></div>
+  <div id="modeRow">
+    <button class="pill" id="mTrain">教學模式 Guided</button>
+    <button class="pill" id="mReal">實戰模式 Real-time</button>
+  </div>
+</div>
+
+<div id="objective"><span id="objIcon"></span><div><div class="zh" id="objZh"></div><div class="en" id="objEn"></div></div>
+  <svg class="ring" id="objRing" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#ffffff30" stroke-width="8"/><circle id="objArc" cx="32" cy="32" r="26" fill="none" stroke="#5fe0aa" stroke-width="8" stroke-dasharray="163.4" stroke-dashoffset="163.4" transform="rotate(-90 32 32)" stroke-linecap="round"/></svg>
+</div>
+<div id="toast"></div>
+
+<div id="brief">
+  <h2>開始壓之前：擺好姿勢<small>GET INTO POSITION</small></h2>
+  <div id="briefSteps">
+    <div class="bs" data-i="0"><svg viewBox="0 0 200 130"><rect x="10" y="104" width="180" height="12" rx="6" fill="#7d8a93"/><ellipse cx="78" cy="122" rx="16" ry="6" fill="#e9b949"/><ellipse cx="122" cy="122" rx="16" ry="6" fill="#e9b949"/><path d="M78 118V84h44v34" stroke="#f6ead0" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M100 84V40" stroke="#f6ead0" stroke-width="14" stroke-linecap="round"/><circle cx="100" cy="24" r="14" fill="#f6ead0"/></svg>
+      <b>① 跪喺膝頭貼紙上</b><span>雙膝分開，貼住佢身側</span><small>Kneel on the knee stickers, close to her side</small></div>
+    <div class="bs" data-i="1"><svg viewBox="0 0 200 130"><ellipse cx="100" cy="92" rx="40" ry="18" fill="#5fe0aa33" stroke="#5fe0aa" stroke-width="3" stroke-dasharray="6 5"/><path d="M66 86q-2-38 34-40q36 2 34 40q-14 12-34 12t-34-12z" fill="#f6ead0"/><path d="M74 66q26-14 52 0M72 78q28-12 56 0" stroke="#c99f80" stroke-width="4" fill="none"/><circle cx="100" cy="92" r="9" fill="#e9b949"/></svg>
+      <b>② 雙手疊埋，掌根放喺胸口貼紙</b><span>手指扣埋，唔好掂肋骨</span><small>Interlock fingers, heel of hand on the chest sticker</small></div>
+    <div class="bs" data-i="2"><svg viewBox="0 0 200 130"><rect x="10" y="108" width="180" height="12" rx="6" fill="#7d8a93"/><path d="M100 106V50" stroke="#5fe0aa" stroke-width="10" stroke-linecap="round"/><path d="M100 50q34-6 54 30M154 80l-30 26" stroke="#f6ead0" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="96" cy="28" r="15" fill="#f6ead0"/><path d="M100 10v-6M94 8l6-6 6 6" stroke="#e9b949" stroke-width="3" fill="none"/></svg>
+      <b>③ 手踭伸直，膊頭喺手正上方</b><span>用上身重量垂直壓落去</span><small>Arms straight, shoulders over hands, push straight down</small></div>
+  </div>
+  <div id="briefFoot">跟住節拍：每分鐘 100–120 下，壓深 5 cm，每下完全放鬆　<b id="briefGo">擺好就開始壓</b></div>
+</div>
+<div id="cpr">
+  <div class="card" id="cardPos"><h3>按壓位置<small>HAND POSITION</small></h3><div class="torso" id="torsoCpr"></div><div id="posMsg"></div></div>
+  <div class="card" id="cardBeat"><h3>節奏 100–120 / 分鐘<small>RATE</small></h3>
+    <div id="beatWrap"><div id="beatRing"></div><div id="beatPulse"></div><div id="beatNum"><span id="cnt">0</span><small id="cntOf">/ 30</small></div></div>
+    <div id="coach"></div>
+    <div id="rateRow"><span>你嘅速度 <b id="rateNum">–</b> 次/分鐘</span><span id="rateMsg"></span></div>
+  </div>
+  <div class="card" id="cardDepth"><h3>深度<small>DEPTH</small></h3>
+    <div id="depthGauge"><div id="depthBand"></div><div id="depthFill"></div><div id="depthPeak"></div>
+      <span class="tick" style="top:0">0 cm</span><span class="tick" id="tk5">5 cm</span><span class="tick" id="tk6">6 cm</span></div>
+    <div id="depthVal">0.0 cm</div>
+    <div id="contactBox"><div id="lamp"></div><div id="lampTxt">未到位</div><small>壓到 5 cm，燈會著</small><div id="lampCount">0 下到位</div></div>
+  </div>
+  <div class="card" id="cardPosture"><h3>姿勢<small>POSTURE</small></h3>
+    <svg viewBox="0 0 260 170" style="width:100%">
+      <rect x="20" y="138" width="220" height="14" rx="7" fill="#7d8a93"/><circle cx="34" cy="128" r="14" fill="#e7c3a4"/>
+      <path d="M132 136V70" stroke="#5fe0aa" stroke-width="9" stroke-linecap="round"/>
+      <path d="M132 70q30-6 52 34M184 104l-34 44h70" stroke="#f6ead0" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="128" cy="46" r="17" fill="#f6ead0"/>
+      <path d="M132 20v-12M126 14l6-8 6 8" stroke="#e9b949" stroke-width="3" fill="none"/>
+      <text x="142" y="14" font-size="12" fill="#e9b949" font-family="sans-serif">膊頭喺手正上方</text>
+      <text x="62" y="104" font-size="12" fill="#5fe0aa" font-family="sans-serif">手踭伸直</text>
+    </svg>
+    <ul>
+      <li>跪喺佢身側，雙膝分開同膊頭闊<small>Kneel beside the chest, knees apart</small></li>
+      <li>兩手疊埋，掌根放胸口正中<small>Heel of hand on centre of chest</small></li>
+      <li>手踭鎖直，用上身重量垂直壓落去<small>Arms locked, push with body weight</small></li>
+      <li>每下壓完完全放鬆，手唔離開胸口<small>Full recoil, hands stay on chest</small></li>
+    </ul>
+  </div>
+</div>
+
+<div id="aed">
+  <div id="aedDev">
+    <h3>AED · 自動體外心臟去顫器</h3>
+    <div id="aedLcd"></div>
+    <div id="shockBtn"><svg viewBox="0 0 24 24"><path d="M13 2L5 14h6l-1 8 9-13h-6z" fill="#fff"/></svg></div>
+    <div id="aedSteps">
+      <div data-s="1">① 開機<b>Power on</b></div>
+      <div data-s="2">② 貼電極片<b>Attach pads</b></div>
+      <div data-s="3">③ 分析：唔好掂<b>Analysing: hands off</b></div>
+      <div data-s="4">④ 彈開，自動電擊<b>Clear, automatic shock</b></div>
+    </div>
+  </div>
+  <div class="card" id="aedBody"><h3>電極片位置<small>PAD PLACEMENT</small></h3><div class="torso" id="torsoAed"></div>
+    <div style="font-size:17px;line-height:1.5;text-align:center">一塊：<b>右邊鎖骨下面</b>　一塊：<b>左邊腋下肋骨側</b><br><small style="opacity:.7">Upper right chest · lower left side</small></div></div>
+</div>
+
+<div id="dialog"><span class="who" id="dWho"></span><div class="zh" id="dZh"></div><div class="en" id="dEn"></div></div>
+<div id="photo">
+  <div id="photoFrame"><video id="photoVideo" muted playsinline></video><div id="photoCount"></div></div>
+  <div id="photoText"><b>先影張飲茶相</b><span>坐好，望住投影下面嘅鏡頭</span><small>Sit up and look at the camera under the screen</small></div>
+</div>
+<div id="cert">
+  <div id="certCard">
+    <div id="certPhoto"><video id="certVideo" muted playsinline></video><canvas id="certShot" width="1040" height="780"></canvas>
+      <div id="certNoCam">Save Lover ✚</div><div id="certCount"></div></div>
+    <div id="certText">
+      <div class="cap">嘉許狀 · CERTIFICATE OF A LIFESAVER</div>
+      <h2>救心英雄</h2>
+      <p class="pose-only">恭喜你！<b>請望向鏡頭</b><small>Congratulations — look at the camera</small></p>
+      <p class="done-only">茲證明呢位茶客，喺 <span id="certDate"></span>，<br>用一雙手同一部 AED，救返外母一命。<small>With two hands and an AED, this person saved a life.</small></p>
+      <div id="certStats" class="done-only"></div>
+      <div id="certFoot"><span>拍 · 叫 · 壓 · 電</span><span>Save Lover ✚</span></div>
+    </div>
+    <div id="certSeal">救</div>
+  </div>
+</div>
+<div id="debrief"></div>
+<div id="flash"></div>
+</div></div>
+
+<button class="pill" id="simBtn" aria-label="操作面板" title="操作面板 (H)">⚙</button>
+<div id="sim">
+  <div id="simHead"><b>操作員 / 模擬面板</b><span id="serState" style="color:#aaa">測距未連接</span><button id="bMini">展開</button><button id="bClose" aria-label="關閉">✕</button></div>
+  <div class="full" style="margin-top:8px"><div id="voiceState" style="font-weight:700"></div><div class="row" style="margin-top:4px"><select id="voiceSel" style="flex:1;min-width:0;font:inherit;background:#2a2a2a;color:#eee;border:1px solid #666;border-radius:8px;padding:5px"></select><button id="bTestVoice">試聽</button></div></div>
+  <div class="row full" style="margin-top:8px"><button id="bSerial">連接測距 Arduino</button><button id="bCam">開啟鏡頭</button><button id="bReset">重設遊戲<kbd>R</kbd></button><button id="bVoice">語音：開</button><button id="bMusic">音樂：開</button><button id="bFull">全螢幕<kbd>Q</kbd></button></div>
+  <h4 class="full">Makey Makey 輸入（亦可以用滑鼠／鍵盤模擬）</h4>
+  <div class="row" id="simObjs"><button id="bPress" class="press">按壓<kbd>Space</kbd></button></div>
+  <div class="full"><h4>胸口接觸點：按住 <kbd>Space</kbd> = 壓到 5 cm（接咗測距 Arduino 就自動改用測距）</h4>
+  <label>模擬深度 <input type="range" id="simDepth" min="20" max="75" value="55"><span id="simDepthV">5.5cm</span></label>
+  <h4>感應器即時讀數</h4>
+  <div id="raw"></div></div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG — numbers you are most likely to tune on site
+   ===================================================================== */
+const CFG = {
+  bpm: 110,                 // metronome
+  depthMin: 50, depthMax: 60,   // mm, adult guideline 5–6 cm
+  rateMin: 100, rateMax: 120,   // compressions / min
+  compTarget: 30,           // compressions per round
+  shoulderThresh: 180,      // analog 0–1023 peak that counts as a shoulder tap
+  touchThresh: 60,          // FSR sum that counts as "someone is touching the chest"
+  hintDelayMs: 7000,        // real-time mode: how long before a hint appears
+  idleResetMs: 60000,
+  ambulanceMs: 240000,      // hard time limit of the rescue
+  stopMs: 25000,            // nobody pushing for this long during CPR: the paramedics arrive and the round ends
+  certMs: 14000,            // how long the certificate stays before the debrief
+  aedPadsMs: 9000,          // the AED steps play by themselves: time given to stick the pads on
+  aedAnalyseMs: 4000,       // 'analysing, do not touch'
+  aedCountMs: 3000,         // 'stand clear' countdown before the automatic shock
+  breathMs: 3000,           // the breathing check is a short scripted beat (not scored)
+  musicVolume: 0.5,         // background music, 0–1
+  musicFiles: false,        // true: use your own bgm_tea.mp3 / bgm_tense.mp3 / bgm_win.mp3 / bgm_sad.mp3 next to this file
+  aedInfo: '下次行過商場、港鐵站、屋苑大堂、學校，留意牆上嘅綠色 AED 標誌。知道佢喺邊，已經行咗第一步。',
+};
+const FAST = new URLSearchParams(location.search).has('fast');   // ?fast = skip waiting (for testing)
+
+/* ===================== small helpers ===================== */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const store = { get(k,d){ try{ const v=localStorage.getItem('sl_'+k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
+                set(k,v){ try{ localStorage.setItem('sl_'+k,JSON.stringify(v)); }catch(e){} } };
+
+const ICON = {
+  pot:'<svg viewBox="0 0 64 64"><ellipse cx="30" cy="38" rx="18" ry="14" fill="#f6ead0"/><path d="M46 34q12-2 12-14" stroke="#f6ead0" stroke-width="5" fill="none"/><path d="M13 32q-10 4-4 14" stroke="#f6ead0" stroke-width="4" fill="none"/><rect x="22" y="20" width="16" height="5" rx="2" fill="#e9b949"/><path d="M24 12q-4-4 0-8M32 12q-4-4 0-8" stroke="#e9b949" stroke-width="2.5" fill="none"/></svg>',
+  shoulder:'<svg viewBox="0 0 64 64"><circle cx="32" cy="16" r="9" fill="#f6ead0"/><path d="M12 46q0-18 20-18t20 18" fill="none" stroke="#f6ead0" stroke-width="6" stroke-linecap="round"/><path d="M6 24l8 8M4 34h9M58 24l-8 8M60 34h-9" stroke="#e9b949" stroke-width="4" stroke-linecap="round"/></svg>',
+  phone:'<svg viewBox="0 0 64 64"><rect x="20" y="6" width="24" height="46" rx="5" fill="#f6ead0"/><rect x="24" y="12" width="16" height="28" fill="#b3211f"/><text x="32" y="31" font-size="10" text-anchor="middle" fill="#fff" font-weight="800" font-family="sans-serif">999</text><path d="M50 16q6 8 0 16M54 10q10 14 0 28" stroke="#e9b949" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>',
+  breath:'<svg viewBox="0 0 64 64"><circle cx="20" cy="30" r="12" fill="#f6ead0"/><path d="M36 22q8-4 12 0t12 0M36 32q8-4 12 0t12 0M36 42q8-4 12 0t12 0" stroke="#e9b949" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>',
+  chest:'<svg viewBox="0 0 64 64"><rect x="6" y="44" width="52" height="12" rx="6" fill="#7d8a93"/><path d="M32 8v26M22 26l10 10 10-10" stroke="#e9b949" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  aed:'<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="42" rx="8" fill="#1f8a5f"/><path d="M32 24c-8-10-20 0-10 10l10 10 10-10c10-10-2-20-10-10z" fill="#fff"/><path d="M34 27l-6 8h5l-3 8 8-10h-5z" fill="#1f8a5f"/></svg>',
+  lid:'<svg viewBox="0 0 64 64"><rect x="8" y="30" width="48" height="24" rx="6" fill="#1f8a5f"/><path d="M10 28L50 8" stroke="#1f8a5f" stroke-width="7" stroke-linecap="round"/><circle cx="32" cy="42" r="6" fill="#8dffc8"/></svg>',
+  pads:'<svg viewBox="0 0 64 64"><rect x="8" y="10" width="22" height="16" rx="4" fill="#fff" stroke="#1f8a5f" stroke-width="3"/><rect x="34" y="38" width="22" height="16" rx="4" fill="#fff" stroke="#1f8a5f" stroke-width="3"/><path d="M19 26q0 20 15 20" stroke="#f6ead0" stroke-width="2.5" fill="none"/></svg>',
+  clear:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="none" stroke="#ff6b6b" stroke-width="6"/><path d="M16 16l32 32" stroke="#ff6b6b" stroke-width="6"/><path d="M26 40V24q0-4 4-4t4 4v-4q0-4 4-4t4 4v20q0 8-8 8t-8-8z" fill="#f6ead0"/></svg>',
+  shock:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#ff8a1c"/><path d="M35 10L18 36h12l-3 18 19-28H34z" fill="#fff"/></svg>',
+};
+$('#cueIcon').innerHTML = ICON.pot;
+
+function torsoSVG(){ return `<svg viewBox="0 0 200 250" style="width:100%;height:100%">
+  <circle cx="100" cy="30" r="24" fill="#e7c3a4"/><rect x="90" y="50" width="20" height="16" fill="#e7c3a4"/>
+  <path d="M30 86q0-22 40-24h60q40 2 40 24v150H30z" fill="#e7c3a4"/>
+  <path d="M100 76v96" stroke="#c99f80" stroke-width="5" stroke-linecap="round"/>
+  <path d="M100 90q-34 2-46 14M100 90q34 2 46 14M100 112q-30 2-42 12M100 112q30 2 42 12M100 134q-26 2-38 12M100 134q26 2 38 12" stroke="#c99f80" stroke-width="3" fill="none"/>
+  <circle cx="68" cy="112" r="3" fill="#b9886a"/><circle cx="132" cy="112" r="3" fill="#b9886a"/>
+  <g class="tgt"><circle cx="100" cy="134" r="22" fill="#5fe0aa33" stroke="#5fe0aa" stroke-width="3" stroke-dasharray="6 5"/><path d="M100 124v20M90 134h20" stroke="#5fe0aa" stroke-width="2.5"/></g>
+  <g class="pad p1"><rect x="44" y="78" width="40" height="30" rx="6" fill="#fff" stroke="#1f8a5f" stroke-width="3"/><text x="64" y="98" text-anchor="middle" font-size="13" font-weight="800" fill="#1f8a5f" font-family="sans-serif">1</text></g>
+  <g class="pad p2"><rect x="126" y="150" width="40" height="30" rx="6" fill="#fff" stroke="#1f8a5f" stroke-width="3"/><text x="146" y="170" text-anchor="middle" font-size="13" font-weight="800" fill="#1f8a5f" font-family="sans-serif">2</text></g>
+  <circle class="hand" cx="100" cy="134" r="13" fill="#fff" stroke="#1c0f0b" stroke-width="3" opacity="0"/>
+  <text x="100" y="246" text-anchor="middle" font-size="11" fill="#f6ead0" opacity=".7" font-family="sans-serif">▲ 頭　　（由上向下望）</text>
+</svg>`; }
+$('#torsoCpr').innerHTML = torsoSVG(); $('#torsoAed').innerHTML = torsoSVG();
+document.querySelectorAll('#torsoCpr .pad').forEach(e=>e.style.display='none');
+document.querySelector('#torsoAed .tgt').style.display='none';
+
+/* ===================== audio ===================== */
+let AC=null, voiceOn = store.get('voice', true);
+function audio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume(); return AC; }
+/* Phones only allow sound after a tap, and iOS also needs the first speech to start inside that tap.
+   unlockAudio() runs on the first tap / key press: it wakes the audio engine, plays one silent sample,
+   and speaks one silent word so later speech is allowed. */
+let unlocked=false, VOICES=[];
+function loadVoices(){ try{ VOICES=speechSynthesis.getVoices()||[]; }catch(e){} fillVoiceList(); }
+/* Cantonese first. The best ones are Microsoft's "Natural" Hong Kong voices (Edge), then "Google 粵語（香港）" (Chrome, needs internet),
+   then any other zh-HK / yue voice installed on the computer. The operator can also pick one by hand in the panel. */
+const isCanto = v => /zh[-_]HK|yue|zh[-_]yue/i.test(v.lang) || /粵|粤|Cantonese|Hong Kong|香港/i.test(v.name);
+function rankVoice(v){ return (isCanto(v)?100:0) + (/Natural/i.test(v.name)?20:0) + (/Online/i.test(v.name)?5:0) + (/Google/i.test(v.name)?10:0) + (/^zh/i.test(v.lang)?1:0); }
+function pickVoice(){
+  const want=store.get('voiceName',''); const chosen=want && VOICES.find(v=>v.name===want && isCanto(v)); if(chosen) return chosen;
+  const c=VOICES.filter(isCanto).sort((a,b)=>rankVoice(b)-rankVoice(a)); return c[0]||null;
+}
+function fillVoiceList(){
+  const sel=document.getElementById('voiceSel'); if(!sel) return;
+  const list=VOICES.filter(isCanto).sort((a,b)=>rankVoice(b)-rankVoice(a));
+  const cur=pickVoice();
+  sel.innerHTML = list.map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}"${cur&&v.name===cur.name?' selected':''}>${isCanto(v)?'廣東話 · ':''}${v.name} (${v.lang})</option>`).join('')
+    || '<option value="">搵唔到廣東話語音</option>';
+  const st=document.getElementById('voiceState');
+  if(st){ st.textContent = cur ? '廣東話語音：'+cur.name : '未有廣東話語音：遊戲唔會出聲，只顯示字幕。請用 Edge 開'; st.style.color = cur ? '#5fe0aa' : '#ff9f1c'; }
+}
+if('speechSynthesis' in window){ loadVoices(); try{ speechSynthesis.addEventListener('voiceschanged', loadVoices); }catch(e){} }
+function unlockAudio(){
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}   // iOS 17+: play even with the silent switch on
+  const ac=audio();
+  if(ac){ try{ const b=ac.createBuffer(1,1,22050), src=ac.createBufferSource(); src.buffer=b; src.connect(ac.destination); src.start(0); }catch(e){} }
+  if(!unlocked && 'speechSynthesis' in window){ try{ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); }catch(e){} }
+  unlocked=true;
+}
+['pointerdown','touchend','keydown','click'].forEach(t=>addEventListener(t, unlockAudio, {capture:true, passive:true}));
+function beep(f=880, d=.08, type='square', vol=.15, when=0){
+  const ac=audio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type; o.frequency.value=f; g.gain.value=vol; o.connect(g); g.connect(ac.destination);
+  const t=ac.currentTime+when; o.start(t); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d); o.stop(t+d+.02);
+}
+function speak(text, who){
+  if(!voiceOn || FAST || !('speechSynthesis' in window)) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text.replace(/[「」『』]/g,''));
+    if(!VOICES.length) loadVoices(); const v=pickVoice();
+    if(!v) return;                                   // Cantonese only: never fall back to another language
+    u.voice=v; u.lang=v.lang; u.rate= who==='aed'?0.95:1.08; u.pitch= who==='gm'?1.25: who==='aed'?0.8:1; u.onstart=()=>{ MUS.duck=1; }; u.onend=u.onerror=()=>{ MUS.duck=0; }; if(speechSynthesis.paused) speechSynthesis.resume(); speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* ===================== background music =====================
+   Made in the browser, so no files are needed. To use your own tracks instead, put any of these
+   next to this HTML file and set CFG.musicFiles to true:  bgm_tea.mp3  bgm_tense.mp3  bgm_win.mp3  bgm_sad.mp3   */
+const MUS = { on: store.get('music', true), track:null, gain:null, next:0, step:0, duck:0, files:{}, el:null, heart:true };
+if(CFG.musicFiles) ['tea','tense','win','sad'].forEach(n=>{ try{ const a=new Audio('bgm_'+n+'.mp3'); a.loop = n!=='win'; a.preload='auto';
+  a.addEventListener('canplaythrough',()=>{ MUS.files[n]=a; if(MUS.track===n && !MUS.el) music(n,true); },{once:true}); a.addEventListener('error',()=>{}); }catch(e){} });
+const HZ = n=>440*Math.pow(2,(n-69)/12);
+const TEA_SCALE=[62,64,66,69,71,74,76], TEA_MEL=[2,-1,4,3, 2,-1,0,-1, 1,2,4,-1, 3,-1,-1,-1, 4,-1,5,4, 3,2,-1,1, 2,-1,1,0, 0,-1,-1,-1], TEA_BASS=[50,47,43,45];
+const SAD_SCALE=[57,60,62,64,67,69], SAD_MEL=[3,-1,2,1, -1,0,-1,-1, 2,-1,1,0, -1,-1,-1,-1], SAD_BASS=[45,41];
+function musNode(){ const ac=audio(); if(!ac) return null; if(!MUS.gain){ MUS.gain=ac.createGain(); MUS.gain.gain.value=0; MUS.gain.connect(ac.destination); } return ac; }
+function pluck(ac,f,t,dur,vol){ const o=ac.createOscillator(), o2=ac.createOscillator(), g=ac.createGain(), lp=ac.createBiquadFilter();
+  o.type='triangle'; o.frequency.value=f; o2.type='sine'; o2.frequency.value=f*2; lp.type='lowpass'; lp.frequency.value=2600;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+.006); g.gain.exponentialRampToValueAtTime(.0005,t+dur);
+  const g2=ac.createGain(); g2.gain.value=.25; o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(MUS.gain);
+  o.start(t); o2.start(t); o.stop(t+dur+.05); o2.stop(t+dur+.05); }
+function pad(ac,f,t,dur,vol){ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+dur*.35); g.gain.linearRampToValueAtTime(0,t+dur); o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t+dur+.05); }
+function thump(ac,t,vol){ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.setValueAtTime(75,t); o.frequency.exponentialRampToValueAtTime(38,t+.16);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+.2); o.connect(g); g.connect(MUS.gain); o.start(t); o.stop(t+.25); }
+const TRACKS = {
+  tea:{ step:.375, play(ac,t,i){ const m=TEA_MEL[i%32]; if(m>=0) pluck(ac,HZ(TEA_SCALE[m]),t,1.1,.11);
+    if(i%8===0){ const b=TEA_BASS[(i/8|0)%4]; pluck(ac,HZ(b),t,2.4,.09); pad(ac,HZ(b+12),t,3,.025); } } },
+  tense:{ step:.5, play(ac,t,i){ if(i%8===0){ pad(ac,HZ(33),t,4.4,.09); pad(ac,HZ(40),t,4.4,.05); }
+    if(MUS.heart && i%2===0){ thump(ac,t,.22); thump(ac,t+.2,.14); } } },
+  win:{ step:.12, play(ac,t,i){ const seq=[62,66,69,74,78,81,86]; if(i<seq.length) pluck(ac,HZ(seq[i]),t,1.6,.12);
+    else if(i===seq.length+6) music('tea'); } },
+  sad:{ step:.9, play(ac,t,i){ const m=SAD_MEL[i%16]; if(m>=0) pluck(ac,HZ(SAD_SCALE[m]),t,2.6,.09);
+    if(i%8===0) pad(ac,HZ(SAD_BASS[(i/8|0)%2]),t,7,.05); } },
+};
+function music(name, force){
+  if(MUS.track===name && !force) return; MUS.track=name;
+  if(MUS.el){ try{ MUS.el.pause(); }catch(e){} MUS.el=null; }
+  const ac=musNode(); if(ac){ MUS.next=ac.currentTime+.05; MUS.step=0; }
+  const f=name && MUS.files[name];
+  if(f){ MUS.el=f; try{ f.currentTime=0; f.volume=0; if(name==='win') f.onended=()=>music('tea'); const pr=f.play(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
+}
+setInterval(()=>{ const ac=AC; if(!ac || !MUS.gain || !MUS.track || MUS.el || !MUS.on) return; const tr=TRACKS[MUS.track];
+  if(MUS.next < ac.currentTime) MUS.next=ac.currentTime+.05;
+  while(MUS.next < ac.currentTime+.25){ tr.play(ac,MUS.next,MUS.step); MUS.next+=tr.step; MUS.step++; } }, 60);
+function musicLevel(S){
+  const busyTask = ['CPR','AED_WAIT','AED_ANALYSE','AED_SHOCK','POSTURE'].includes(S);
+  MUS.heart = !['CPR','AED_WAIT'].includes(S);                           // no heartbeat over the compression metronome
+  const v = MUS.on ? CFG.musicVolume * (busyTask?.45:1) * (S==='DEBRIEF'?.6:1) * (MUS.duck?.45:1) : 0;
+  if(MUS.el){ MUS.el.volume = clamp(v,0,1); return; }
+  const ac=musNode(); if(ac && MUS.gain) MUS.gain.gain.setTargetAtTime(v, ac.currentTime, .25);
+}
+
+/* =====================================================================
+   HARDWARE LAYER
+   1) Makey Makey = a keyboard. Only FIVE inputs, all on the front of the board (crocodile clips):
+        ↓      teapot      (reed switch under the tray: resting = closed, lifting releases the key)
+        ←      shoulders   (foil pressure switch on each shoulder)
+        →      phone       (reed switch in the phone stand: lifting = calling 999)
+        ↑      AED         (reed switch in the wall bracket: lifting = AED fetched)
+        Space  chest       (contact point inside the chest: closes when pushed 5 cm)
+      Everything else (AED power, pads, analysis, shock) plays on screen by itself.
+   2) Distance sensor on a small Arduino over USB serial, one line per reading:   D,<millimetres>
+      Game -> Arduino (optional chest light):  L,0 off / L,1 beat / L,2 good / L,3 bad / L,4 hands off
+   ===================================================================== */
+const HW = { contact:0, touch:0, dialEv:0, tof:-1, base:0, depth:0, shoulder:0, phone:0, aed:0, lid:0, pad1:0, pad2:0, shock:0, breath:0, pot:0, posC:0, posLow:0 };
+const PREV = {};
+let port=null, writer=null, serialOk=false, lastFrame=0;
+
+async function connectSerial(){
+  if(!('serial' in navigator)){ toast('呢個瀏覽器唔支援 Web Serial，請用 Chrome / Edge'); return; }
+  try{
+    port = await navigator.serial.requestPort(); await port.open({ baudRate:115200 });
+    writer = port.writable.getWriter(); serialOk=true; $('#serState').textContent='測距已連接'; $('#serState').style.color='#5fe0aa';
+    const dec = new TextDecoderStream(); port.readable.pipeTo(dec.writable).catch(()=>{}); const reader = dec.readable.getReader();
+    let buf='';
+    while(true){ const {value,done} = await reader.read(); if(done) break; buf+=value; let i;
+      while((i=buf.indexOf('\n'))>=0){ parseFrame(buf.slice(0,i).trim()); buf=buf.slice(i+1); } }
+  }catch(e){ console.warn(e); }
+  serialOk=false; $('#serState').textContent='測距已斷線'; $('#serState').style.color='#ff6b6b';
+}
+/* depth = resting distance − current distance. The resting distance is found automatically:
+   it is the largest (smoothed) distance seen in the last 3 seconds, i.e. the chest fully released. */
+const hist=[]; let ema=null;
+function parseFrame(line){
+  if(line[0]!=='D') return; const mm=Number(line.slice(2)); if(!isFinite(mm)||mm<=0||mm>2000) return;
+  ema = ema==null? mm : ema*0.4+mm*0.6; hist.push(ema); if(hist.length>150) hist.shift();
+  HW.tof=mm; HW.base=Math.max.apply(null,hist); const d=clamp(HW.base-ema,0,90); HW.depth = d<3?0:d; lastFrame=performance.now();
+}
+window.__parse=parseFrame;
+function send(cmd){ if(serialOk && writer){ writer.write(new TextEncoder().encode(cmd+'\n')).catch(()=>{}); } }
+let ledNow='';
+function led(n){ if(ledNow!==n){ ledNow=n; send('L,'+n); } }
+function ledFlash(n){ send('L,'+n); ledNow=''; }
+
+/* ----- Makey Makey / keyboard ----- */
+const KEYS = { arrowleft:'shoulder', arrowright:'phone', arrowup:'aed', arrowdown:'pot', w:'pot' };   // + Space = chest pushed 5 cm (W kept as a spare key for the teapot)
+const LIFT = { pot:1, phone:1, aed:1 };          // key released = object picked up
+const HOLD = { shock:1, touch:1 };                // true only while the key is held
+                                                 // lid / pad1 / pad2 stay on once pressed, until the game resets
+const SIM = { down:false, target:55, d:0, was:false };
+const SIMOBJ = [
+  ['pot','茶壺','↓'],['shoulder','膊頭','←'],['phone','電話','→'],['aed','AED','↑'],
+];
+const simBox=$('#simObjs');
+SIMOBJ.forEach(([k,label,key])=>{ const b=document.createElement('button'); b.id='sim_'+k; b.innerHTML=label+'<kbd>'+key+'</kbd>';
+  if(HOLD[k] && k!=='shock'){ b.onpointerdown=()=>{ HW[k]=1; }; b.onpointerup=b.onpointerleave=()=>{ HW[k]=0; }; }
+  else b.onclick=()=>simAct(k);
+  simBox.appendChild(b); });
+function simAct(k){ audio();
+  if(k==='shoulder'){ HW.shoulder=900; return; }
+  if(k==='shock'){ HW.shockEv=1; return; }
+  if(k==='dial'){ HW.dialEv=1; return; }
+  if(k==='pot'){ HW[k]=1; setTimeout(()=>HW[k]=0,250); return; }   // momentary
+  if(LIFT[k]){ HW[k]=HW[k]?0:1; return; }
+  HW[k]=1;
+}
+const PLACED={};   // 1 = the object is sitting on its switch (its key is held), 0 = lifted; only keys we have seen
+addEventListener('keydown',e=>{ audio(); const k=e.key.toLowerCase(), m=KEYS[k]; if(m && LIFT[m]) PLACED[m]=1;
+  if(m||e.code==='Space') e.preventDefault();
+  if(m){
+    if(LIFT[m]) HW[m]=0;                              // object is sitting on its contacts
+    else if(m==='shoulder'){ if(!e.repeat) HW.shoulder=900; }
+    else if(m==='dial'){ if(!e.repeat) HW.dialEv=1; }
+    else { if(m==='shock' && !e.repeat) HW.shockEv=1; HW[m]=1; }
+    return; }
+  if(e.repeat) return;
+  if(e.code==='Space'){ SIM.down=true; contactDown(); }
+  else if(k==='h') toggleSim(); else if(k==='r') reset(); else if(k==='q') fullscreen();
+  else if(k==='enter' && G.state==='ATTRACT') simAct('pot');
+});
+addEventListener('keyup',e=>{ const m=KEYS[e.key.toLowerCase()]; if(m && LIFT[m]) PLACED[m]=0;
+  if(m){ if(LIFT[m]) HW[m]=1; else if(HOLD[m]) HW[m]=0; }
+  if(e.code==='Space'){ SIM.down=false; HW.contact=0; } });
+const sensorLive = ()=> serialOk && performance.now()-lastFrame<1000;   // distance sensor is sending: use it; otherwise use the Space contact point
+function contactDown(){
+  const now=performance.now(); if(HW.contact) return; HW.contact=1;
+  if(sensorLive()) return;
+  if(now-G.lastContact<250) return;                    // ignore contact bounce
+  G.lastContact=now; G.lastEvent=now;
+  const hp=handPos(); DET.zoneAtPeak = hp? (hp.zone==='X'?'X':hp.zone) : 'C'; DET.lastValley=0;
+  onPeak(55, now, true);
+}
+function simTick(){
+  const live = sensorLive();
+  if(!live){ SIM.d=0; SIM.was=false; HW.depth=0; return; }
+  const tgt = SIM.down? SIM.target : 0; SIM.d += (tgt-SIM.d)*0.5; if(SIM.d<0.3) SIM.d=0;
+  if(live && SIM.d===0 && !SIM.was) return;
+  SIM.was = SIM.d>0; HW.depth = SIM.d;
+}
+$('#simDepth').oninput=e=>{ SIM.target=+e.target.value; $('#simDepthV').textContent=(SIM.target/10).toFixed(1)+'cm'; };
+function toggleSim(){ $('#sim').classList.toggle('open'); }
+const narrow = ()=> innerWidth<=900 || innerHeight<=520;
+$('#sim').classList.add('mini');                                     // opens as a one-line strip; 展開 shows everything
+function syncMini(){ $('#bMini').textContent = $('#sim').classList.contains('mini')?'展開':'縮細'; }
+$('#bMini').onclick=()=>{ $('#sim').classList.toggle('mini'); syncMini(); }; syncMini();
+$('#bClose').onclick=()=>{ $('#sim').classList.remove('open'); };
+/* touch button for a compression (phones have no Space key) */
+const bP=$('#bPress');
+bP.addEventListener('pointerdown',e=>{ e.preventDefault(); audio(); try{bP.setPointerCapture(e.pointerId);}catch(_){}
+  SIM.down=true; contactDown(); bP.classList.add('on'); });
+['pointerup','pointercancel'].forEach(t=>bP.addEventListener(t,()=>{ SIM.down=false; HW.contact=0; bP.classList.remove('on'); }));
+$('#simBtn').onclick=toggleSim;
+$('#bSerial').onclick=()=>{ audio(); connectSerial(); };
+$('#bCam').onclick=()=>{ audio(); openCam(); };
+$('#bReset').onclick=()=>reset();
+$('#bVoice').onclick=e=>{ voiceOn=!voiceOn; store.set('voice',voiceOn); e.target.textContent='語音：'+(voiceOn?'開':'關'); if(!voiceOn&&window.speechSynthesis) speechSynthesis.cancel(); };
+$('#bVoice').textContent='語音：'+(voiceOn?'開':'關');
+$('#voiceSel').onchange=e=>{ store.set('voiceName', e.target.value); fillVoiceList(); };
+$('#bTestVoice').onclick=()=>{ unlockAudio(); const was=voiceOn; voiceOn=true; speak('外母，你聽唔聽到我講嘢？','op'); voiceOn=was; };
+setTimeout(fillVoiceList, 0); setTimeout(()=>{ loadVoices(); }, 1500);
+$('#bMusic').onclick=e=>{ audio(); MUS.on=!MUS.on; store.set('music',MUS.on); e.target.textContent='音樂：'+(MUS.on?'開':'關'); };
+$('#bMusic').textContent='音樂：'+(MUS.on?'開':'關');
+$('#bFull').onclick=fullscreen;
+function fullscreen(){ const el=document.documentElement; if(!document.fullscreenElement) el.requestFullscreen&&el.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); }
+
+/* ----- camera for the certificate ----- */
+let cam=null;
+async function openCam(quiet){
+  try{ cam = await navigator.mediaDevices.getUserMedia({ video:{ width:1280, height:720 }, audio:false });
+    const v=$('#photoVideo'); v.srcObject=cam; await v.play(); $('#bCam').textContent='鏡頭：已開'; $('#bCam').classList.add('on'); }
+  catch(e){ cam=null; if(!quiet) toast('開唔到鏡頭：請允許瀏覽器使用鏡頭'); }
+}
+
+/* ----- hands on the patient: F = a light-touch pad over the chest, Space = pushed 5 cm, or real depth ----- */
+function handPos(){ return (HW.depth>5 || HW.contact || HW.touch) ? { zone:'C' } : null; }
+const touching = ()=> HW.depth>8 || HW.contact || HW.touch;
+
+/* =====================================================================
+   COMPRESSION DETECTOR — peak / valley tracking on the depth signal
+   ===================================================================== */
+const DET = { dir:1, ext:0, lastValley:0, peaks:[], zoneAtPeak:'C' };
+function detReset(){ DET.dir=1; DET.ext=0; DET.lastValley=0; DET.peaks=[]; }
+function detTick(now){
+  const d=HW.depth, H=8;
+  if(DET.dir>0){
+    if(d>DET.ext){ DET.ext=d; const hp=handPos(); DET.zoneAtPeak=hp?hp.zone:'C'; }
+    else if(d<DET.ext-H){ const peak=DET.ext; DET.dir=-1; DET.ext=d; if(peak>=15) onPeak(peak, now); }
+  }else{
+    if(d<DET.ext) DET.ext=d;
+    else if(d>DET.ext+H){ DET.lastValley=DET.ext; DET.dir=1; DET.ext=d; }
+    if(d<2) DET.lastValley=0;
+  }
+}
+function onPeak(peak, now, contact){
+  if(DET.peaks.length && now-DET.peaks[DET.peaks.length-1]>1500) DET.peaks=[];   // a pause restarts the rate count
+  DET.peaks.push(now); if(DET.peaks.length>5) DET.peaks.shift();
+  let cpm=null; if(DET.peaks.length>=3){ const n=DET.peaks.length; cpm = 60000*(n-1)/(DET.peaks[n-1]-DET.peaks[0]); }
+  const c = { t:now, depth:peak, cpm, zone:DET.zoneAtPeak, recoil: DET.lastValley<=10,
+    depthOK: peak>=CFG.depthMin && peak<=CFG.depthMax+3, posOK: DET.zoneAtPeak==='C',
+    rateOK: cpm==null || (cpm>=CFG.rateMin-3 && cpm<=CFG.rateMax+3) };
+  c.contact=!!contact; c.good = c.depthOK && c.posOK && c.rateOK && c.recoil;
+  fire('comp', c);
+}
+
+/* =====================================================================
+   GAME
+   ===================================================================== */
+const G = { state:'ATTRACT', mode: store.get('mode','train'), busy:false, queue:[], qTimer:0, tState:0, surv:85, t0:0, lastEvent:0,
+            comps:[], round:0, roundCount:0, lastComp:0, log:{}, flags:{}, breathAcc:0, anT:0, aedFetched:false, called:false, pending:[] };
+window.__G=G; window.__HW=HW;
+
+const OBJ = {
+  what:    { i:'shoulder', zh:'外母倒咗喺地下。你會點做？', en:'She has collapsed. What do you do?' , generic:true},
+  response:{ i:'shoulder', zh:'拍佢兩邊膊頭，大聲叫佢', en:'Tap both shoulders and shout — is she responsive?' },
+  call:     { i:'phone',    zh:'拎起電話，打 999 求救', en:'Pick up the phone to call 999' },
+  dial:     { i:'phone',    zh:'撳 9-9-9，再撳綠色撥號掣', en:'Dial 9-9-9 and press the green call button' },
+  breath:   { i:'breath',   zh:'睇住佢心口：有冇正常呼吸？', en:'Watch her chest: is she breathing normally?' },
+  cpr:     { i:'chest',    zh:'跪低，雙手壓喺胸口正中，跟住節拍用力壓', en:'Kneel, hands on centre of chest, push hard and fast' },
+  fetch:   { i:'aed',      zh:'AED 喺邊？搵綠色標誌，攞過嚟！', en:'Where is the AED? Find the green sign and bring it here' },
+  lid:      { i:'lid',      zh:'AED 開機：跟住佢嘅語音做', en:'The AED is on: follow its voice' },
+  pads:    { i:'pads',     zh:'照圖貼好兩塊電極片', en:'Stick both pads on as shown' },
+  analyse: { i:'clear',    zh:'分析緊心律：唔好掂病人！', en:'Analysing heart rhythm — do not touch the patient' },
+  shock:    { i:'shock',    zh:'大叫「全部人彈開！」雙手離開病人', en:'Shout “Everybody clear!” and take your hands off' },
+};
+function setObj(key, generic){
+  const o = (G.mode==='real' && generic) ? OBJ.what : OBJ[key]; G.objKey=key; G.objGeneric=(G.mode==='real'&&generic);
+  $('#objIcon').innerHTML=ICON[o.i]; $('#objZh').textContent=o.zh; $('#objEn').textContent=o.en; $('#objective').style.display='flex'; $('#objRing').style.display='none';
+}
+function hideObj(){ $('#objective').style.display='none'; }
+function ring(frac){ $('#objRing').style.display='block'; $('#objArc').setAttribute('stroke-dashoffset', 163.4*(1-clamp(frac,0,1))); }
+let toastT=0; function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; clearTimeout(toastT); toastT=setTimeout(()=>t.style.display='none', 2600); }
+function flash(color='#fff'){ const f=$('#flash'); f.style.background=color; f.style.transition='none'; f.style.opacity=.9; requestAnimationFrame(()=>{ f.style.transition='opacity .6s'; f.style.opacity=0; }); }
+function tag(zh,en){ $('#sceneTag').innerHTML = zh+'<small>'+en+'</small>'; }
+
+const WHO = { gm:['外母','gm'], you:['你',''], op:['999 調派員','op'], aed:['AED 語音','aed'], nar:['',  'nar'], warn:['提示','warn'], medic:['救護員','op'] };
+/* blocking dialogue: say([[who, zh, en], ...], then) */
+function stopTalk(){ clearTimeout(G.qTimer); clearTimeout(G.briefT); G.queue=[]; G.then=null; G.busy=false; G.pending=[]; $('#dialog').style.display='none';
+  if(window.speechSynthesis) try{ speechSynthesis.cancel(); }catch(e){} }
+function say(lines, then){ G.queue = lines.slice(); G.then = then||null; G.busy=true; nextLine(); }
+function nextLine(){
+  clearTimeout(G.qTimer);
+  if(!G.queue.length){ G.busy=false; $('#dialog').style.display='none'; const t=G.then; G.then=null; if(t) t();
+    const pend=G.pending; G.pending=[]; pend.forEach(ev=>{ if(!G.busy) fire(ev); else if(!G.pending.includes(ev)) G.pending.push(ev); }); return; }
+  const [who, zh, en, fx] = G.queue.shift(); show(who, zh, en); if(fx) fx();
+  G.qTimer = setTimeout(nextLine, FAST? 30 : Math.max(2200, zh.length*230));
+}
+/* non-blocking caption */
+function show(who, zh, en){ const w=WHO[who]; const el=$('#dWho'); el.textContent=w[0]; el.className='who '+w[1]; el.style.display=w[0]?'inline-block':'none';
+  $('#dZh').textContent=zh; $('#dEn').textContent=en||''; $('#dialog').style.display='block'; speak(zh, who); }
+function note(zh,en){ show('warn',zh,en); clearTimeout(G.noteT); G.noteT=setTimeout(()=>{ if(!G.busy) $('#dialog').style.display='none'; }, FAST?50:4200); }
+
+function setMode(m){ G.mode=m; store.set('mode',m); $('#mTrain').classList.toggle('on',m==='train'); $('#mReal').classList.toggle('on',m==='real'); }
+$('#mTrain').onclick=()=>{audio();setMode('train')}; $('#mReal').onclick=()=>{audio();setMode('real')}; setMode(G.mode);
+
+function reset(){
+  clearTimeout(G.qTimer); clearTimeout(G.noteT); if(window.speechSynthesis) try{speechSynthesis.cancel()}catch(e){}
+  Object.assign(G,{ state:'ATTRACT', busy:false, queue:[], then:null, surv:85, comps:[], round:0, roundCount:0, lastComp:0, log:{}, flags:{}, breathAcc:0, aedFetched:false, called:false, shocked:false, t0:0, pending:[], tShock:0, tResume:0, touchLatch:false, anT:0, lastContact:0, warned:false, shallow:0, phoneUp:false, tDial:0, clearTouches:0 });
+  HW.contact=0; $('#lampCount').textContent='0 下到位';
+  ['#dialog','#cpr','#aed','#debrief','#surv','#clock','#cert','#photo','#brief'].forEach(s=>$(s).style.display='none'); hideObj(); clearTimeout(G.certT); clearTimeout(G.photoT); clearTimeout(G.briefT);
+  music('tea');
+  G.photo=false; { const c=$('#certShot'); c.getContext('2d').clearRect(0,0,c.width,c.height); }
+  Object.assign(HW,{ pot:0, phone:0, aed:0, lid:0, pad1:0, pad2:0, shock:0, shoulder:0 }); for(const k in PREV) PREV[k]=0;
+  $('#title').style.display='flex'; $('#stage').classList.remove('dim'); $('#gmLie').setAttribute('opacity',0); $('#gmSit').setAttribute('opacity',1);
+  $('#gmSitBody').setAttribute('transform',''); $('#aedPadsScene').setAttribute('opacity',0); tag('',''); led(0); detReset();
+  G.lastEvent=performance.now();
+}
+function go(state){ G.state=state; G.tState=performance.now(); (ENTER[state]||(()=>{}))(); }
+function mark(step, status, noteTxt){ const old=G.log[step], t=G.t0? (performance.now()-G.t0)/1000 : 0;
+  if(old && old.s!=='ok' && status==='ok'){ old.s='mid'; old.t=t; return; }      // done in the end, but with a slip: keep the note
+  G.log[step]={ s:status, n:noteTxt||(old?old.n:''), t }; }
+function flag(k, zh, en){ if(G.flags[k]) return false; G.flags[k]=true; if(zh) note(zh,en); return true; }
+
+/* ---------- state entry ---------- */
+const ENTER = {
+  PHOTO(){ $('#title').style.display='none'; $('#photo').style.display='flex'; $('#photoCount').textContent='';
+    speak('先影張飲茶相。坐好，望住鏡頭。','op'); let n=3;
+    const tick=()=>{ if(G.state!=='PHOTO') return;
+      if(n>0){ $('#photoCount').textContent=n; beep(700,.12); n--; G.photoT=setTimeout(tick, FAST?30:1000); }
+      else { takePhoto(); $('#photoCount').textContent=''; G.photoT=setTimeout(()=>{ if(G.state==='PHOTO'){ $('#photo').style.display='none'; go('INTRO'); } }, FAST?30:900); } };
+    G.photoT=setTimeout(tick, FAST?30:1800); },
+  INTRO(){ $('#title').style.display='none'; tag('場景一 · 飲茶','SCENE 1 · YUM CHA WITH MOTHER-IN-LAW');
+    say([
+      ['nar','星期六朝早，長發邨茶樓。你照舊陪外母飲茶。','Saturday morning. Yum cha with your mother-in-law, as always.'],
+      ['gm','「乖喇，又嚟陪我。今日啲蝦餃好新鮮，食多兩粒啦。」','“Good of you to come. The har gow is fresh today — have some more.”'],
+      ['gm','「下星期六阿女生日，我哋再嚟呢度，好唔好？」','“It’s my daughter’s birthday next Saturday. Let’s come back here, shall we?”'],
+      ['gm','「咦……我個心口……有啲翳……」','“Oh… my chest… it feels tight…”', ()=>{ $('#gmSitBody').setAttribute('transform','rotate(8)'); $('#gmArm').setAttribute('d','M40 140q30 20 -30 20'); }],
+    ], ()=>go('COLLAPSE')); },
+  COLLAPSE(){ music(null); flash('#fff'); beep(90,.5,'sawtooth',.3); $('#gmSit').setAttribute('opacity',0); $('#gmLie').setAttribute('opacity',1); $('#gmArm').setAttribute('d','M40 140q46 30 20 90');
+    tag('場景二 · 突發','SCENE 2 · COLLAPSE'); G.t0=performance.now(); G.surv=85; $('#surv').style.display='block'; $('#clock').style.display='block';
+    say([['nar','砰——外母成個人跌咗落地，一動不動。','She slumps to the floor and lies still.'],
+         ['nar','茶樓好嘈，冇人留意到。而家得你。','The restaurant is noisy. Nobody has noticed. It is up to you.']], ()=>go('RESPONSE')); },
+  RESPONSE(){ music('tense'); setObj('response', true); },
+  CALL(){ if(G.called){ go('BREATH'); return; } if(G.phoneUp){ connectCall(); return; } setObj('call', true); },
+  BREATH(){ G.breathAcc=0; show('op','「佢有冇正常呼吸？睇住佢心口。」','“Is she breathing normally? Watch her chest.”'); setObj('breath'); G.tState=performance.now(); },
+  PRECPR(){ hideObj();
+    const lines=[['nar','心口冇起伏，只係間中喘氣：唔係正常呼吸。','No chest movement, only gasping: not normal breathing.'],
+      ['op','「即刻做心外壓！」','“Start chest compressions now!”']];
+    if(G.aedFetched){ mark('cpr1','ok','AED 已經喺手，先用 AED 係啱嘅'); } if(G.aedFetched) lines.push(['op','「你手上有 AED？即刻開機，跟佢指示。」','“You have an AED? Switch it on now and follow its instructions.”']);
+    else lines.push(['op','「跟住畫面擺好姿勢，一撳落去就開始計。」','“Follow the screen and get into position. Counting starts with your first push.”']);
+    say(lines, ()=> go(G.aedFetched?'AED_ON':'POSTURE')); },
+  POSTURE(){ hideObj(); $('#stage').classList.add('dim'); $('#brief').style.display='flex'; tag('場景三 · 準備心外壓','SCENE 3 · GET INTO POSITION');
+    const steps=[['跪喺膝頭貼紙上。','Kneel on the knee stickers.'],['雙手疊埋，掌根放喺胸口貼紙。','Interlock your hands, heel of the hand on the chest sticker.'],['手踭伸直，膊頭喺手正上方。','Arms straight, shoulders over your hands.']];
+    const els=document.querySelectorAll('.bs'); els.forEach(e=>e.className='bs'); $('#briefGo').textContent='擺好就開始壓'; let i=0;
+    const next=()=>{ if(G.state!=='POSTURE') return;
+      if(i<3){ els.forEach((e,k)=>e.className='bs'+(k===i?' on':k<i?' seen':'')); show('op','「'+steps[i][0]+'」',steps[i][1]); i++; G.briefT=setTimeout(next, FAST?30:3200); }
+      else { els.forEach(e=>e.className='bs seen'); $('#briefGo').textContent='開始壓！'; show('op','「準備好，跟住節拍，開始壓！」','“Ready — push with the beat!”'); G.briefT=setTimeout(()=>{ if(G.state==='POSTURE') go('CPR'); }, FAST?30:2600); } };
+    next(); },
+  CPR(){ clearTimeout(G.briefT); $('#brief').style.display='none'; if(!G.busy) $('#dialog').style.display='none'; G.round++; G.roundCount=0; detReset(); $('#stage').classList.add('dim'); $('#cpr').style.display='flex'; $('#aed').style.display='none';
+    tag(G.round===1?'場景三 · 心外壓':'場景五 · 繼續心外壓', G.round===1?'SCENE 3 · CHEST COMPRESSIONS':'SCENE 5 · KEEP COMPRESSING'); setObj('cpr'); led(1); $('#coach').textContent=''; $('#cnt').textContent='0'; },
+  AED_WAIT(){ setObj('fetch'); show('op','「做得好，唔好停！附近有冇 AED？睇下牆上綠色標誌，攞過嚟！」','“Good, don’t stop! Is there an AED nearby? Look for the green sign and bring it!”'); },
+  AED_ON(){ $('#cpr').style.display='none'; $('#stage').classList.add('dim'); $('#aed').style.display='flex'; tag('場景四 · AED','SCENE 4 · DEFIBRILLATOR'); setObj('lid'); led(0);
+    aedStep(1,'開機','Powering on'); mark('aedOn','ok'); beep(880,.1); beep(1320,.15,'square',.15,.12);
+    say([['aed','「AED 已開機。請保持冷靜，跟住指示做。」','“AED on. Stay calm and follow the instructions.”']], ()=>go('AED_PADS')); },
+  AED_PADS(){ aedStep(2,'撕開電極片，照圖貼喺病人胸口','Peel the pads and attach them as shown'); setObj('pads'); beep(1000,.12); G.tState=performance.now();
+    show('aed','「撕開電極片，一塊貼喺右邊鎖骨下面，一塊貼喺左邊腋下。」','“Peel off the pads: one below the right collarbone, one on the left side under the armpit.”'); },
+  AED_ANALYSE(){ aedStep(3,'分析緊心律…… 唔好掂病人','Analysing heart rhythm — do not touch'); setObj('analyse'); led(4); G.tState=performance.now(); $('#aedPadsScene').setAttribute('opacity',1); mark('pads','ok');
+    show('aed','「正在分析心律。不要觸碰病人。」','“Analysing heart rhythm. Do not touch the patient.”'); },
+  AED_SHOCK(){ aedStep(4,'建議電擊！所有人離開病人','Shock advised! Everyone stand clear'); setObj('shock'); $('#shockBtn').classList.add('arm'); G.tState=performance.now(); G.countShown=0;
+    show('aed','「建議電擊。所有人離開病人。」','“Shock advised. Everyone stand clear.”'); },
+  ENDING(){ hideObj(); $('#cpr').style.display='none'; $('#aed').style.display='none'; led(0); $('#stage').classList.remove('dim'); ending(); },
+};
+function aedStep(n, zh, en){ $('#aedLcd').innerHTML = zh+'<small>'+en+'</small>';
+  document.querySelectorAll('#aedSteps div').forEach(d=>{ const s=+d.dataset.s; d.className = s<n?'done': s===n?'now':''; });
+  $('#shockBtn').classList.remove('arm'); }
+
+function connectCall(auto){
+  G.called=true; G.phoneUp=true; mark('call','ok'); hideObj(); beep(440,.25,'sine',.12); beep(440,.25,'sine',.12,.5);
+  say([['op','「999 緊急中心。」','“999, what is your emergency?”'],
+       ['you','「長發邨茶樓！我外母暈低咗，叫佢冇反應！」','“Cheung Fat Estate restaurant! My mother-in-law collapsed, she’s not responding!”'],
+       ['op','「救護車出發緊。放低電話，我一路教你做。」','“The ambulance is on its way. Put the phone down, I’ll talk you through it.”']], ()=>go('BREATH'));
+}
+/* ---------- events from hardware ---------- */
+function fire(ev, data){
+  G.lastEvent=performance.now();
+  if(G.state==='ATTRACT'){ if(ev==='pot'){ audio(); go(cam?'PHOTO':'INTRO'); } return; }
+  if(G.state==='PHOTO') return;
+  if(G.state==='DEBRIEF'){ if(ev==='pot' || ev==='shoulder') reset(); return; }
+  if(G.state==='CERT'){ if(ev==='pot' && $('#cert').className==='done') endCert(); return; }
+  // from the breathing check onwards, the first push starts CPR at once (and is counted), even mid-dialogue
+  if(ev==='comp' && (['BREATH','PRECPR','POSTURE'].includes(G.state) || (G.state==='AED_SHOCK' && G.shocked))){ stopTalk(); go('CPR'); }
+  if(ev==='comp') recordComp(data);
+  if(G.busy){ if(ev!=='comp' && !G.pending.includes(ev)) G.pending.push(ev); return; }   // cutscene playing: replay afterwards
+  const S=G.state;
+
+  if(ev==='aed' && !G.aedFetched){ G.aedFetched=true; mark('aedFetch','ok'); beep(660,.1);
+    if(S==='RESPONSE'){ mark('aedFetch','mid','未確認反應、未求救就走開咗'); note('AED 到手——但你仲未確認佢有冇反應，亦未叫救護車。','You have the AED — but you have not checked her or called for help yet.'); return; }
+    if(S==='CALL'){ note('AED 到手。記住仲要打 999。','AED in hand. You still need to call 999.'); return; }
+    if(S==='BREATH') return;
+    if(S==='CPR'||S==='AED_WAIT'){ if(G.roundCount>0) mark('cpr1','ok'); say([['op','「AED 到！即刻開機，跟佢指示。」','“The AED is here! Switch it on and follow its instructions.”']], ()=>go('AED_ON')); return; }
+  }
+  if(S==='RESPONSE'){
+    if(ev==='shoulder'){ mark('response','ok'); hideObj(); say([['you','「媽！媽！你聽唔聽到？」','“Mum! Mum! Can you hear me?”'],['nar','冇反應。冇反應，就要即刻求救。','No response. No response means: get help now.']], ()=>go('CALL')); }
+    else if(ev==='phone'){ G.phoneUp=true; if(flag('earlyPhone')){ mark('call','mid','次序：應該先拍膊頭確認反應，再打 999'); note('電話喺手。打之前，先拍膊頭確認佢有冇反應。','Phone in hand. Before you call, tap her shoulders to check.'); } }
+    else if(ev==='comp'){ if(flag('earlyComp')) { mark('response','no','未確認反應就開始按壓'); note('等陣！未確認佢有冇反應，亦未求救。先拍膊頭。','Wait — you have not checked her or called for help. Tap her shoulders first.'); } }
+  }
+  else if(S==='CALL'){
+    if(ev==='phone'){ connectCall(); }
+    else if(ev==='comp'){ if(flag('noCall')) note('得你一個人撐唔耐。先打 999，調派員會教你做。','You cannot do this alone. Call 999 first — the dispatcher will coach you.'); }
+  }
+  else if(S==='BREATH'){
+    // (a push here jumps straight to CPR: see the top of fire())
+  }
+}
+function aedShock(){
+  G.shocked=true; G.tShock=performance.now(); mark('shock','ok'); flash('#bfe3ff'); beep(140,.35,'sawtooth',.35); $('#shockBtn').classList.remove('arm');
+  aedStep(4,'電擊完成','Shock delivered'); G.surv=clamp(G.surv+14,3,95);
+  say([['aed','「電擊完成。電極片唔好撕走，立即繼續心外壓。」','“Shock delivered. Leave the pads on and resume compressions immediately.”']], ()=>go('CPR'));
+}
+function recordComp(c){
+  G.lastComp=c.t; c.state=G.state; G.comps.push(c);
+  if(!G.log.firstComp) G.log.firstComp={ s:'ok', t:(c.t-G.t0)/1000 };
+  if(G.shocked && !G.tResume){ G.tResume=c.t; }
+  if(G.state==='AED_ANALYSE'||G.state==='AED_SHOCK') return;
+  if(G.state!=='CPR' && G.state!=='AED_WAIT') return;
+  G.roundCount++; ledFlash(c.good?2:3); setTimeout(()=>{ if(G.state==='CPR'||G.state==='AED_WAIT') led(1); },140);
+  $('#cnt').textContent = G.roundCount;
+  const co=$('#coach'); let msg='好！保持', ok=true;
+  if(!c.posOK){ ok=false; msg = c.zone==='D'?'手太低，移上啲':'手偏咗，移返正中'; }
+  else if(c.depth<CFG.depthMin){ ok=false; msg='再大力啲，壓深啲'; }
+  else if(c.depth>CFG.depthMax+3){ ok=false; msg='太深喇，收少少力'; }
+  else if(!c.recoil){ ok=false; msg='每下要完全放鬆'; }
+  else if(c.cpm && c.cpm<CFG.rateMin-3){ ok=false; msg='快啲！跟節拍'; }
+  else if(c.cpm && c.cpm>CFG.rateMax+3){ ok=false; msg='慢少少，跟節拍'; }
+  co.textContent=msg; co.className=ok?'ok':'no';
+  if(c.cpm){ $('#rateNum').textContent=Math.round(c.cpm); }
+  $('#depthPeak').style.top = (clamp(c.depth,0,75)/75*100)+'%'; $('#lampCount').textContent=G.roundCount+' 下到位'; G.warned=false;
+  if(G.state==='CPR' && !G.busy && G.roundCount>=CFG.compTarget){
+    mark('cpr1','ok'); if(G.shocked) mark('cpr2','ok');
+    if(G.shocked) say([['nar','遠處傳嚟救護車聲。救護員衝入嚟接手。','Sirens. The paramedics rush in and take over.']], ()=>go('ENDING'));
+    else if(G.aedFetched) say([['op','「好！而家用 AED，撳開機掣。」','“Good! Now use the AED — press the power button.”']], ()=>go('AED_ON'));
+    else go('AED_WAIT');
+  }
+}
+
+/* ---------- per-frame logic ---------- */
+let lastT=performance.now(), beatPhase=0, lastBeat=0;
+function frame(now){
+  const dt=Math.min(100, now-lastT); lastT=now;
+  simTick(); edges(); detTick(now);
+  if(G.state==='ATTRACT'){ const names={pot:'茶壺',phone:'電話',aed:'AED'}; const away=Object.keys(PLACED).filter(k=>PLACED[k]===0).map(k=>names[k]);
+    let t=away.length?'工作人員：請放返 '+away.join('、'):'';
+    if(voiceOn && 'speechSynthesis' in window && VOICES.length && !pickVoice()) t+=(t?'　':'')+'未有廣東話語音（遊戲會冇聲）：請用 Microsoft Edge 開'; if($('#homeCheck').textContent!==t) $('#homeCheck').textContent=t; }
+  const S=G.state, rescue = G.t0 && S!=='ENDING' && S!=='DEBRIEF' && S!=='ATTRACT' && S!=='CERT' && S!=='PHOTO';
+
+  if(rescue && !G.busy){
+    // survival model: falls while nobody is compressing
+    const compressing = now-G.lastComp<1300; const recentGood = G.comps.length && G.comps[G.comps.length-1].good;
+    let rate = compressing ? (recentGood?0:0.3) : 0.9; if(S.startsWith('AED_') && S!=='AED_WAIT') rate=0.25; if(S==='POSTURE') rate=0;
+    G.surv = clamp(G.surv - rate*dt/1000*(FAST?0:1), 3, 95);
+    // real-time mode: reveal the hint after a delay
+    if(G.objGeneric && now-G.tState>CFG.hintDelayMs){ G.flags.hinted=true; setObj(G.objKey,false); }
+
+    if(S==='BREATH' && G.objKey==='breath'){
+      const el=now-G.tState; ring(el/CFG.breathMs); if(el>CFG.breathMs||FAST) go('PRECPR');
+    }
+    if(S==='AED_PADS'){ const el=now-G.tState; ring(el/CFG.aedPadsMs); if(el>CFG.aedPadsMs||FAST) go('AED_ANALYSE'); }
+    else if(S==='AED_ANALYSE'){ const el=now-G.tState; ring(el/CFG.aedAnalyseMs);
+      if(Math.floor(el/600)!==Math.floor((el-dt)/600)) beep(1200,.05,'sine',.1);
+      if(el>CFG.aedAnalyseMs||FAST) go('AED_SHOCK'); }
+    else if(S==='AED_SHOCK' && !G.shocked){ const el=now-G.tState, left=Math.ceil((CFG.aedCountMs-el)/1000); ring(el/CFG.aedCountMs);
+      if(left!==G.countShown && left>0){ G.countShown=left; aedStep(4,'自動電擊：'+left+'……','Automatic shock in '+left+'…'); beep(900,.1); }
+      if(el>CFG.aedCountMs||FAST) aedShock(); }
+    if(S==='CPR' && now-Math.max(G.lastComp,G.tState)>CFG.stopMs && !FAST){ say([['nar','冇人繼續壓。幾分鐘後救護員先趕到。','Nobody kept pushing. The paramedics arrive minutes later.']], ()=>go('ENDING')); }
+    if(S==='AED_WAIT' && now-G.tState>25000){ say([['nar','你一直壓到救護員到場。但係心臟始終未回復正常跳動。','You keep compressing until the paramedics arrive. But her heart never gets its rhythm back.']], ()=>go('ENDING')); }
+    if(now-G.t0>CFG.ambulanceMs && !FAST){ say([['nar','救護員到場，接手急救。','The paramedics arrive and take over.']], ()=>go('ENDING')); }
+  }
+  musicLevel(S);
+  // metronome + pulse while compressions are wanted
+  if((S==='CPR'||S==='AED_WAIT') && !G.busy){
+    const period=60000/CFG.bpm; if(now-lastBeat>=period){ lastBeat=now; beep(1100,.035,'square',.08); }
+    const ph=(now-lastBeat)/period; $('#beatPulse').style.transform='scale('+(0.62+0.38*Math.max(0,1-ph*2.2))+')';
+    // contact mode: three beats with no counted compression -> tell them to push deeper
+    if(!sensorLive() && now-Math.max(G.lastComp, G.tState)>period*3 && !G.warned){
+      G.warned=true; const co=$('#coach'); co.className='no';
+      if(G.roundCount===0){ co.textContent='開始壓！跟住節拍'; } else { G.shallow++; co.textContent='壓深啲！要壓到 5 cm 先計'; speak('壓深啲','op'); } }
+  }
+  // HUD
+  if($('#cpr').style.display==='flex'){
+    const hp=handPos(); const dot=document.querySelector('#torsoCpr .hand');
+    if(hp){ dot.setAttribute('opacity',1); dot.setAttribute('cy',134); dot.setAttribute('fill','#5fe0aa'); $('#posMsg').textContent='雙手喺胸口'; $('#posMsg').style.color='#5fe0aa'; }
+    else { dot.setAttribute('opacity',0); $('#posMsg').textContent='掌根放喺胸口貼紙'; $('#posMsg').style.color=''; }
+    $('#cardDepth').classList.toggle('depthContact', !sensorLive());
+    $('#depthFill').style.height=(clamp(HW.depth,0,75)/75*100)+'%'; $('#depthVal').textContent=(HW.depth/10).toFixed(1)+' cm';
+    const on=!!HW.contact; $('#lamp').classList.toggle('on',on); $('#lampTxt').classList.toggle('on',on); $('#lampTxt').textContent=on?'到位':'未到位';
+  }
+  if($('#aed').style.display==='flex'){
+    document.querySelector('#torsoAed .p1').style.opacity = G.state!=='AED_PADS'?1:(.35+.4*Math.abs(Math.sin(now/260)));
+    document.querySelector('#torsoAed .p2').style.opacity = G.state!=='AED_PADS'?1:(.35+.4*Math.abs(Math.sin(now/260)));
+  }
+  if(rescue){ $('#survNum').textContent=Math.round(G.surv)+'%'; $('#survBar').style.width=G.surv/95*100+'%';
+    const s=Math.floor((now-G.t0)/1000); $('#clockNum').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+  // idle reset
+  if(S!=='ATTRACT' && !G.busy && now-G.lastEvent>CFG.idleResetMs && !FAST) reset();
+  // operator panel
+  if($('#sim').classList.contains('open')){
+    $('#raw').textContent = `深度 ${HW.depth.toFixed(1)} mm   距離 ${HW.tof} mm   靜止 ${HW.base|0} mm\n茶壺 ${HW.pot} 電話 ${HW.phone} AED ${HW.aed}\n胸口接觸點 ${HW.contact}\n狀態 ${S}${G.busy?' (對白中)':''}   按壓 ${G.comps.length}`;
+    SIMOBJ.forEach(([k])=>{ const b=$('#sim_'+k); if(b) b.classList.toggle('on', !!HW[k] && k!=='shoulder'); });
+  }
+  requestAnimationFrame(frame);
+}
+/* rising edges of the physical objects become game events */
+let lastTap=-1e9;
+function edges(){
+  ['pot','phone','aed'].forEach(k=>{ if(HW[k] && !PREV[k]) fire(k); PREV[k]=HW[k]; });
+  if(HW.shockEv){ HW.shockEv=0; fire('shock'); }
+  if(HW.dialEv){ HW.dialEv=0; fire('dial'); }
+  if(HW.shoulder>CFG.shoulderThresh && performance.now()-lastTap>600){ lastTap=performance.now(); fire('shoulder'); } HW.shoulder=0;
+}
+
+/* ---------- ending + debrief ---------- */
+function stats(){
+  const cs=G.comps.filter(c=>c.state==='CPR'||c.state==='AED_WAIT'); const n=cs.length||1; const pct=f=>Math.round(cs.filter(f).length/n*100);
+  const withRate=cs.filter(c=>c.cpm); const avg=a=>a.length? a.reduce((x,y)=>x+y,0)/a.length : 0;
+  return { n:cs.length, good:pct(c=>c.good), depth:pct(c=>c.depthOK), pos:pct(c=>c.posOK), recoil:pct(c=>c.recoil), rate:pct(c=>c.rateOK),
+    avgRate:Math.round(avg(withRate.map(c=>c.cpm))), avgDepth:(avg(cs.map(c=>c.depth))/10).toFixed(1),
+    tFirst: G.log.firstComp? Math.round(G.log.firstComp.t):null, tShock: G.log.shock? Math.round(G.log.shock.t):null,
+    pause: (G.tShock&&G.tResume)? ((G.tResume-G.tShock)/1000).toFixed(1):null };
+}
+function ending(){
+  const st=stats(); G.state='ENDING'; let kind = (G.shocked && G.surv>=55 && st.good>=40) ? 'A' : (G.surv>=30 && st.n>=20) ? 'B' : 'C'; G.kind=kind;
+  music(kind==='A'?'win':'sad');
+  $('#surv').style.display='none'; $('#clock').style.display='none';
+  const L = {
+    A:[['medic','「有返脈搏喇！你頭先嘅心外壓同電擊，救返佢一命。」','“We have a pulse! Your compressions and that shock saved her life.”'],
+       ['nar','下個星期六，同一張枱。','The following Saturday. The same table.', ()=>{ tag('尾聲','EPILOGUE'); $('#gmLie').setAttribute('opacity',0); $('#gmSit').setAttribute('opacity',1); $('#gmSitBody').setAttribute('transform',''); }],
+       ['gm','「今次等我斟茶畀你。」','“This time, let me pour the tea for you.”']],
+    B:[['medic','「我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。」','“We’ll take over. Your compressions bought time, but her heart has not found its rhythm.”'],
+       ['nar','外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。','She is taken to intensive care. The doctor says an earlier shock would have made a real difference.', ()=>tag('尾聲','EPILOGUE')]],
+    C:[['medic','「我哋盡力喇…… 太遲喇。」','“We did everything we could… it was too late.”'],
+       ['nar','下個星期六，張枱空咗一個位。','The following Saturday, one seat at the table is empty.', ()=>{ tag('尾聲','EPILOGUE'); $('#gmLie').setAttribute('opacity',0); }],
+       ['nar','現實冇得重來。但喺呢度，你可以再試一次。','Real life has no second try. Here, you get one.']],
+  }[kind];
+  say(L, ()=> kind==='A' ? cert(st) : debrief(kind, st));
+}
+/* ---------- certificate: only when she is saved ---------- */
+function cert(st){
+  G.state='CERT'; G.lastEvent=performance.now(); G.certSt=st; tag('',''); const el=$('#cert'); el.className='done'; el.style.display='flex';
+  $('#certVideo').style.display='none'; $('#certShot').style.display = G.photo?'block':'none'; $('#certNoCam').style.display = G.photo?'none':'flex';
+  const d=new Date(); $('#certDate').textContent = d.getFullYear()+' 年 '+(d.getMonth()+1)+' 月 '+d.getDate()+' 日';
+  $('#certStats').innerHTML = `<div><b>${st.good}%</b>合格按壓</div><div><b>${st.avgRate||'–'}</b>每分鐘次數</div><div><b>${st.tShock!=null?st.tShock+' 秒':'–'}</b>倒地至電擊</div>`;
+  flash('#fff'); beep(880,.12); beep(1320,.2,'sine',.15,.14); speak('恭喜你，救返外母！你係救心英雄。','op');
+  G.certT=setTimeout(()=>{ if(G.state==='CERT') endCert(); }, FAST?400:CFG.certMs);
+}
+function takePhoto(){
+  flash('#fff'); beep(1400,.18,'sine',.2);
+  const v=$('#photoVideo'), c=$('#certShot'), x=c.getContext('2d'); if(!cam || !v.videoWidth) return;
+  const vw=v.videoWidth, vh=v.videoHeight, r=c.width/c.height; let sw=vw, sh=vw/r; if(sh>vh){ sh=vh; sw=vh*r; }
+  x.save(); x.translate(c.width,0); x.scale(-1,1); x.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,c.width,c.height); x.restore();   // mirrored, like the preview
+  G.photo=true;
+}
+function snap(){
+  flash('#fff'); beep(1400,.18,'sine',.2);
+  if(cam){ const v=$('#certVideo'), c=$('#certShot'), x=c.getContext('2d'); const vw=v.videoWidth||1280, vh=v.videoHeight||720, r=c.width/c.height;
+    let sw=vw, sh=vw/r; if(sh>vh){ sh=vh; sw=vh*r; }
+    x.save(); x.translate(c.width,0); x.scale(-1,1); x.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,0,0,c.width,c.height); x.restore();   // mirrored, like the preview
+    c.style.display='block'; v.style.display='none'; }
+  $('#cert').className='done'; G.lastEvent=performance.now();
+  G.certT=setTimeout(()=>{ if(G.state==='CERT') endCert(); }, FAST?400:CFG.certMs);
+}
+function endCert(){ clearTimeout(G.certT); $('#cert').style.display='none'; debrief('A', G.certSt); }
+function debrief(kind, st){
+  G.state='DEBRIEF'; G.lastEvent=performance.now();
+  const head = { A:['你救返外母','She lives — because of you'], B:['你爭取到時間，但未夠','You bought time, but not enough'], C:['今次救唔到','Not this time'] }[kind];
+  const row=(key,zh,why)=>{ const l=G.log[key]; const s=l?l.s:'no'; const m={ok:'✓',mid:'△',no:'✗'}[s];
+    return `<li><span class="mark ${s}">${m}</span><div>${zh}<small>${(l&&l.n)?l.n+'。':''}${why}</small></div></li>`; };
+  const tile=(v,lab,ok)=>`<div class="tile ${ok==null?'':ok?'ok':'no'}"><b>${v}</b><span>${lab}</span></div>`;
+  const contactRun = G.comps.length ? G.comps.every(c=>c.contact) : !sensorLive();
+  $('#debrief').innerHTML = `
+   <h2>${head[0]}<small>${head[1]}</small></h2>
+   <div class="sub">最終存活機會 ${Math.round(G.surv)}%　·　${st.tFirst!=null?'倒地後 '+st.tFirst+' 秒開始按壓':'冇做到心外壓'}　·　${st.tShock!=null?'第 '+st.tShock+' 秒電擊':'冇用到 AED'}</div>
+   <div id="dbGrid"><ul class="steps">
+     ${row('response','① 拍膊頭、叫佢','確認冇反應先至係心臟驟停嘅第一個訊號')}
+     ${row('call','② 拎起電話打 999','調派員會一路教你做，你唔使記晒所有步驟')}
+     ${row('cpr1','③ 心外壓 30 下','胸口正中、5–6 cm 深、每分鐘 100–120 下')}
+     ${row('aedFetch','④ 攞 AED，跟住佢嘅語音做','開機 → 貼電極片（右鎖骨下、左腋下）→ 分析同電擊時唔好掂病人。電極片一直貼住，等救護員接手')}
+     ${row('cpr2','⑤ 電擊後即刻繼續壓','電擊完心臟未必即刻有力，要靠你繼續泵血')}
+   </ul><div>
+     <div class="tiles">
+       ${tile(st.good+'%','合格按壓比例',st.good>=60)}
+       ${tile(st.avgRate||'–','平均速度（目標 100–120）',st.avgRate>=100&&st.avgRate<=120)}
+       ${contactRun ? tile(st.n,'壓到 5 cm 嘅次數'+(G.shallow?'（提示咗 '+G.shallow+' 次壓深啲）':''),G.shallow<=1) : tile(st.avgDepth,'平均深度 cm（目標 5–6）',st.avgDepth>=5&&st.avgDepth<=6.3)}
+       ${tile(st.tShock!=null?st.tShock+'s':'–','倒地至電擊',st.tShock!=null)}
+       ${tile(st.pause!=null?st.pause+'s':'–','電擊後幾耐先繼續壓',st.pause!=null&&st.pause<6)}
+     </div>
+     <div id="dbTake">記住四個字：<b>拍、叫、壓、電</b><br>拍膊頭 → 叫救護車同攞 AED → 壓胸口 → 電擊。唔識做唔緊要，<b>打 999</b>，調派員會教你。</div>
+     <div id="dbAed"><b>你附近嘅 AED 喺邊？</b><br>${CFG.aedInfo}</div>
+   </div></div>
+   <div id="dbFoot"><span>放低茶壺，再拎起就可以再玩　Put the teapot down, then lift it to play again</span><span class="staff">工作人員：撕走電極片，電話、AED、茶壺放返原位</span></div>`;
+  $('#debrief').style.display='block';
+}
+
+/* ---------- boot ---------- */
+(function gauge(){ const p=v=>v/75*100; $('#depthBand').style.top=p(CFG.depthMin)+'%'; $('#depthBand').style.height=p(CFG.depthMax-CFG.depthMin)+'%'; $('#tk5').style.top=p(50)+'%'; $('#tk6').style.top=p(60)+'%'; $('#depthPeak').style.top='0%'; })();
+function fit(){ const s=Math.min(innerWidth/1600, innerHeight/900); $('#stage').style.transform='scale('+s+')'; }
+addEventListener('resize',fit); fit();
+$('#startCue').onclick=()=>{ audio(); simAct('pot'); };
+$('#startCue').style.cursor='pointer';
+reset(); requestAnimationFrame(frame);
+if(!FAST && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) openCam(true);   // ask for the camera once at start; the 開啟鏡頭 button still works
+</script>
+</body>
+</html>
