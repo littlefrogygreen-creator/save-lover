@@ -663,7 +663,7 @@ function beep(f=880, d=.08, type='square', vol=.15, when=0){
 /* ===================== recorded voices =====================
    Every spoken line can be a recording in the folder voice/ next to this file, named by voiceId(text) + .mp3 or .wav
    (record.html makes them). A recording always wins; a line without one falls back to the device's Cantonese voice. */
-const VOICE_LINES = ["星期六朝早，長發邨茶樓。你又係乖乖哋陪外母飲茶。", "哎呀乖喇，又嚟陪我！今日啲蝦餃正到爆㗎，嚟嚟嚟，食多兩粒！", "下個禮拜六阿女生日，我哋再嚟呢度，坐返呢張枱，好唔好呀？", "咦……哎呀……我個心口……好翳呀……", "砰！外母成個人跌咗落地，一嘟都唔嘟！", "茶樓嘈到拆天，個個掛住食燒賣，冇人留意到。而家……得返你！", "媽！媽呀！你聽唔聽到我講嘢呀？！", "冇反應！冇反應就唔好再望喇，即刻求救呀！", "喂，999 緊急中心，咩事呀？", "長發邨茶樓呀！我外母暈咗，點叫都唔應呀！", "冷靜啲！救護車已經出緊嚟。放低電話，我一路教你做。", "好，聽住！先幫佢鬆開個衣領，一隻手按住額頭，另一隻手托高下巴，打開氣道！", "睇住佢心口——有冇正常呼吸呀？", "心口冇郁，好耐先抽一啖氣——呢個唔係正常呼吸呀！", "即刻做心外壓！快！", "跟住畫面擺好姿勢，一撳落去就開始計數！", "跪喺膝頭貼紙上面。", "雙手疊埋，掌根放喺胸口貼紙。", "手踭伸直，膊頭擺喺雙手正上面。", "準備好未？跟住節拍——壓！壓！壓！", "壓深啲", "做得好，千祈唔好停！附近有冇 AED？睇下牆上面綠色嗰個標誌，即刻攞過嚟！", "AED 到喇！即刻開機，佢講乜你做乜！", "好嘢！而家用 AED，撳開機掣！", "你手上有 AED？即刻開機，佢講乜你做乜！", "AED 已開機。請保持冷靜，跟住指示做。", "撕開電極片，一塊貼喺右邊鎖骨下面，一塊貼喺左邊腋下。", "正在分析心律。不要觸碰病人。", "建議電擊。所有人離開病人。", "電擊完成。電極片唔好撕走，立即繼續心外壓。", "遠處傳嚟「咿嘟咿嘟」——救護員終於衝咗入嚟接手！", "有返脈搏喇！靠晒你頭先嘅心外壓同電擊，救返佢一命呀！", "下個禮拜六，同一張枱……", "今次輪到我斟茶畀你啦！", "恭喜你，救返外母！你就係——救心英雄！", "你一路壓到救護員到場，但係佢個心……始終冇返正常跳動。", "我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。", "外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。", "你停咗手……冇人繼續壓。幾分鐘之後，救護員先姍姍嚟遲。", "救護員到場，接手急救！", "我哋已經盡咗力……太遲喇。", "下個禮拜六，張枱……空咗一個位。", "現實冇得重嚟。但喺呢度，你可以再試多次！", "先影張飲茶相！坐好，望住鏡頭，笑！", "喂喂喂！等陣先！你未確認佢有冇反應，又未求救！先拍膊頭呀！", "電話喺手喇，但打之前，先拍膊頭睇下佢有冇反應呀！", "你一個人頂唔順㗎！先打 999，調派員會教你點做！", "AED 攞到喇——但係你仲未確認佢有冇反應，又未叫救護車呀！", "AED 攞到手。記住，仲要打 999 呀！"];
+const VOICE_LINES = ["星期六朝早，長發邨茶樓。你又係乖乖哋陪外母飲茶。", "哎呀乖喇，又嚟陪我！今日啲蝦餃正到爆㗎，嚟嚟嚟，食多兩粒！", "下個禮拜六阿女生日，我哋再嚟呢度，坐返呢張枱，好唔好啊？", "咦……哎呀……我個心口……好翳啊……", "砰！外母成個人跌咗落地，郁都唔郁！", "茶樓嘈到拆天，個個掛住食燒賣，冇人留意到。而家……得返你！", "媽！媽啊！你聽唔聽到我講嘢啊？！", "冇反應！冇反應就唔好再望喇，即刻求救啊！", "喂，999 緊急中心，咩事啊？", "長發邨茶樓啊！我外母暈咗，點叫都唔應啊！", "冷靜啲！救護車已經出緊嚟。放低電話，我一路教你做。", "好，聽住！先幫佢鬆開個衣領，一隻手按住額頭，另一隻手托高下巴，打開氣道！", "睇住佢心口——有冇正常呼吸啊？", "心口冇郁，好耐先抽一啖氣——呢個唔係正常呼吸啊！", "即刻做心外壓！快！", "跟住畫面擺好姿勢，一撳落去就開始計數！", "跪喺膝頭貼紙上面。", "雙手疊埋，掌根放喺胸口貼紙。", "手踭伸直，膊頭擺喺雙手正上面。", "準備好未？跟住節拍——壓！壓！壓！", "壓深啲", "做得好，千祈唔好停！附近有冇 AED？睇下牆上面綠色嗰個標誌，即刻攞過嚟！", "AED 到喇！即刻開機，佢講乜你做乜！", "好嘢！而家用 AED，撳開機掣！", "你手上有 AED？即刻開機，佢講乜你做乜！", "AED 已開機。請保持冷靜，跟住指示做。", "撕開電極片，一塊貼喺右邊鎖骨下面，一塊貼喺左邊腋下。", "正在分析心律。不要觸碰病人。", "建議電擊。所有人離開病人。", "電擊完成。電極片唔好撕走，立即繼續心外壓。", "遠處傳嚟咿嘟咿嘟——救護員終於衝咗入嚟接手！", "有返脈搏喇！靠晒你頭先嘅心外壓同電擊，救返佢一命啊！", "下個禮拜六，同一張枱……", "今次輪到我斟茶畀你啦！", "恭喜你，救返外母！你就係——救心英雄！", "你一路壓到救護員到場，但係佢個心……始終冇返正常跳動。", "我哋接手。你做心外壓爭取到時間，但係佢心臟一直未回復正常跳動。", "外母送入深切治療部。醫生話：如果早啲用到 AED，機會會大好多。", "你停咗手……冇人繼續壓。幾分鐘之後，救護員先姍姍嚟遲。", "救護員到場，接手急救！", "我哋已經盡咗力……太遲喇。", "下個禮拜六，張枱……空咗一個位。", "現實冇得重嚟。但喺呢度，你可以再試多次！", "先影張飲茶相！坐好，望住鏡頭，笑！", "喂喂喂！等陣先！你未確認佢有冇反應，又未求救！先拍膊頭啊！", "電話喺手喇，但打之前，先拍膊頭睇下佢有冇反應啊！", "你一個人頂唔順㗎！先打 999，調派員會教你點做！", "AED 攞到喇——但係你仲未確認佢有冇反應，又未叫救護車啊！", "AED 攞到手。記住，仲要打 999 啊！"];
 function voiceId(t){ let h=5381; for(let i=0;i<t.length;i++){ h=((h<<5)+h+t.charCodeAt(i))|0; } return 'v'+(h>>>0).toString(36); }
 const VO = { tok:0, src:null, el:null, raw:{}, buf:{}, list:null, http: /^https?:/.test(location.protocol) };
 function voiceManifest(){                     // voice/index.json lists the recordings that exist, so missing ones cost no requests
@@ -1013,20 +1013,20 @@ const ENTER = {
     say([
       ['nar','星期六朝早，長發邨茶樓。你又係乖乖哋陪外母飲茶。','Saturday morning. Yum cha with your mother-in-law, as always.'],
       ['gm','「哎呀乖喇，又嚟陪我！今日啲蝦餃正到爆㗎，嚟嚟嚟，食多兩粒！」','“Good of you to come. The har gow is fresh today — have some more.”'],
-      ['gm','「下個禮拜六阿女生日，我哋再嚟呢度，坐返呢張枱，好唔好呀？」','“It’s my daughter’s birthday next Saturday. Let’s come back here, shall we?”'],
-      ['gm','「咦……哎呀……我個心口……好翳呀……」','“Oh… my chest… it feels tight…”', ()=>{ $('#gmSitBody').setAttribute('transform','rotate(8)'); setArm('M40 140q30 20 -30 20'); }],
+      ['gm','「下個禮拜六阿女生日，我哋再嚟呢度，坐返呢張枱，好唔好啊？」','“It’s my daughter’s birthday next Saturday. Let’s come back here, shall we?”'],
+      ['gm','「咦……哎呀……我個心口……好翳啊……」','“Oh… my chest… it feels tight…”', ()=>{ $('#gmSitBody').setAttribute('transform','rotate(8)'); setArm('M40 140q30 20 -30 20'); }],
     ], ()=>go('COLLAPSE')); },
   COLLAPSE(){ music(null); flash('#fff'); beep(90,.5,'sawtooth',.3); { const b=$('#bang'); b.setAttribute('opacity',1); b.classList.remove('pop'); void b.getBBox(); b.classList.add('pop'); setTimeout(()=>b.setAttribute('opacity',0), FAST?50:1800); } $('#gmSit').setAttribute('opacity',0); $('#gmLie').setAttribute('opacity',1); setArm('M40 140q46 30 20 90');
     tag('場景二 · 突發','SCENE 2 · COLLAPSE'); G.t0=performance.now(); G.surv=85; $('#surv').style.display='block'; $('#clock').style.display='block';
-    say([['nar','砰！外母成個人跌咗落地，一嘟都唔嘟！','She slumps to the floor and lies still.'],
+    say([['nar','砰！外母成個人跌咗落地，郁都唔郁！','She slumps to the floor and lies still.'],
          ['nar','茶樓嘈到拆天，個個掛住食燒賣，冇人留意到。而家……得返你！','The restaurant is noisy. Nobody has noticed. It is up to you.']], ()=>go('RESPONSE')); },
   RESPONSE(){ music('tense'); setObj('response', true); },
   CALL(){ if(G.called){ go('AIRWAY'); return; } if(G.phoneUp){ connectCall(); return; } setObj('call', true); },
   AIRWAY(){ hideObj(); setObj('airway'); $('#airCard').style.display='flex'; G.tState=performance.now();
     show('op','「好，聽住！先幫佢鬆開個衣領，一隻手按住額頭，另一隻手托高下巴，打開氣道！」','“Loosen her collar. One hand on her forehead, the other lifts her chin to open the airway.”'); },
-  BREATH(){ $('#airCard').style.display='none'; G.breathAcc=0; show('op','「睇住佢心口——有冇正常呼吸呀？」','“Is she breathing normally? Watch her chest.”'); setObj('breath'); G.tState=performance.now(); },
+  BREATH(){ $('#airCard').style.display='none'; G.breathAcc=0; show('op','「睇住佢心口——有冇正常呼吸啊？」','“Is she breathing normally? Watch her chest.”'); setObj('breath'); G.tState=performance.now(); },
   PRECPR(){ hideObj();
-    const lines=[['nar','心口冇郁，好耐先抽一啖氣——呢個唔係正常呼吸呀！','No chest movement, only gasping: not normal breathing.'],
+    const lines=[['nar','心口冇郁，好耐先抽一啖氣——呢個唔係正常呼吸啊！','No chest movement, only gasping: not normal breathing.'],
       ['op','「即刻做心外壓！快！」','“Start chest compressions now!”']];
     if(G.aedFetched){ mark('cpr1','ok','AED 已經喺手，先用 AED 係啱嘅'); } if(G.aedFetched) lines.push(['op','「你手上有 AED？即刻開機，佢講乜你做乜！」','“You have an AED? Switch it on now and follow its instructions.”']);
     else lines.push(['op','「跟住畫面擺好姿勢，一撳落去就開始計數！」','“Follow the screen and get into position. Counting starts with your first push.”']);
@@ -1060,8 +1060,8 @@ function setArm(d){ ['#gmArm','#gmArmO'].forEach(q=>{ const e=document.querySele
 function aedSensorOn(){ return CFG.aedSensor===true || (CFG.aedSensor==='auto' && 'aed' in PLACED); }
 function connectCall(auto){
   G.called=true; G.phoneUp=true; mark('call','ok'); hideObj(); beep(440,.25,'sine',.12); beep(440,.25,'sine',.12,.5);
-  say([['op','「喂，999 緊急中心，咩事呀？」','“999, what is your emergency?”'],
-       ['you','「長發邨茶樓呀！我外母暈咗，點叫都唔應呀！」','“Cheung Fat Estate restaurant! My mother-in-law collapsed, she’s not responding!”'],
+  say([['op','「喂，999 緊急中心，咩事啊？」','“999, what is your emergency?”'],
+       ['you','「長發邨茶樓啊！我外母暈咗，點叫都唔應啊！」','“Cheung Fat Estate restaurant! My mother-in-law collapsed, she’s not responding!”'],
        ['op','「冷靜啲！救護車已經出緊嚟。放低電話，我一路教你做。」','“The ambulance is on its way. Put the phone down, I’ll talk you through it.”']], ()=>go('AIRWAY'));
 }
 /* ---------- events from hardware ---------- */
@@ -1079,15 +1079,15 @@ function fire(ev, data){
   const S=G.state;
 
   if(ev==='aed' && !G.aedFetched){ G.aedFetched=true; mark('aedFetch','ok'); beep(660,.1);
-    if(S==='RESPONSE'){ mark('aedFetch','mid','未確認反應、未求救就走開咗'); note('AED 攞到喇——但係你仲未確認佢有冇反應，又未叫救護車呀！','You have the AED — but you have not checked her or called for help yet.'); return; }
-    if(S==='CALL'){ note('AED 攞到手。記住，仲要打 999 呀！','AED in hand. You still need to call 999.'); return; }
+    if(S==='RESPONSE'){ mark('aedFetch','mid','未確認反應、未求救就走開咗'); note('AED 攞到喇——但係你仲未確認佢有冇反應，又未叫救護車啊！','You have the AED — but you have not checked her or called for help yet.'); return; }
+    if(S==='CALL'){ note('AED 攞到手。記住，仲要打 999 啊！','AED in hand. You still need to call 999.'); return; }
     if(S==='BREATH') return;
     if(S==='CPR'||S==='AED_WAIT'){ if(G.roundCount>0) mark('cpr1','ok'); say([['op','「AED 到喇！即刻開機，佢講乜你做乜！」','“The AED is here! Switch it on and follow its instructions.”']], ()=>go('AED_ON')); return; }
   }
   if(S==='RESPONSE'){
-    if(ev==='shoulder'){ mark('response','ok'); hideObj(); say([['you','「媽！媽呀！你聽唔聽到我講嘢呀？！」','“Mum! Mum! Can you hear me?”'],['nar','冇反應！冇反應就唔好再望喇，即刻求救呀！','No response. No response means: get help now.']], ()=>go('CALL')); }
-    else if(ev==='phone'){ G.phoneUp=true; if(flag('earlyPhone')){ mark('call','mid','次序：應該先拍膊頭確認反應，再打 999'); note('電話喺手喇，但打之前，先拍膊頭睇下佢有冇反應呀！','Phone in hand. Before you call, tap her shoulders to check.'); } }
-    else if(ev==='comp'){ if(flag('earlyComp')) { mark('response','no','未確認反應就開始按壓'); note('喂喂喂！等陣先！你未確認佢有冇反應，又未求救！先拍膊頭呀！','Wait — you have not checked her or called for help. Tap her shoulders first.'); } }
+    if(ev==='shoulder'){ mark('response','ok'); hideObj(); say([['you','「媽！媽啊！你聽唔聽到我講嘢啊？！」','“Mum! Mum! Can you hear me?”'],['nar','冇反應！冇反應就唔好再望喇，即刻求救啊！','No response. No response means: get help now.']], ()=>go('CALL')); }
+    else if(ev==='phone'){ G.phoneUp=true; if(flag('earlyPhone')){ mark('call','mid','次序：應該先拍膊頭確認反應，再打 999'); note('電話喺手喇，但打之前，先拍膊頭睇下佢有冇反應啊！','Phone in hand. Before you call, tap her shoulders to check.'); } }
+    else if(ev==='comp'){ if(flag('earlyComp')) { mark('response','no','未確認反應就開始按壓'); note('喂喂喂！等陣先！你未確認佢有冇反應，又未求救！先拍膊頭啊！','Wait — you have not checked her or called for help. Tap her shoulders first.'); } }
   }
   else if(S==='CALL'){
     if(ev==='phone'){ connectCall(); }
@@ -1125,7 +1125,7 @@ function recordComp(c){
   $('#depthPeak').style.top = (clamp(c.depth,0,75)/75*100)+'%'; $('#lampCount').textContent=G.roundCount+' 下到位'; G.warned=false;
   if(G.state==='CPR' && !G.busy && G.roundCount>=CFG.compTarget){
     mark('cpr1','ok'); if(G.shocked) mark('cpr2','ok');
-    if(G.shocked) say([['nar','遠處傳嚟「咿嘟咿嘟」——救護員終於衝咗入嚟接手！','Sirens. The paramedics rush in and take over.']], ()=>go('ENDING'));
+    if(G.shocked) say([['nar','遠處傳嚟咿嘟咿嘟——救護員終於衝咗入嚟接手！','Sirens. The paramedics rush in and take over.']], ()=>go('ENDING'));
     else if(G.aedFetched) say([['op','「好嘢！而家用 AED，撳開機掣！」','“Good! Now use the AED — press the power button.”']], ()=>go('AED_ON'));
     else go('AED_WAIT');
   }
@@ -1224,7 +1224,7 @@ function ending(){
   music(kind==='A'?'win':'sad');
   $('#surv').style.display='none'; $('#clock').style.display='none';
   const L = {
-    A:[['medic','「有返脈搏喇！靠晒你頭先嘅心外壓同電擊，救返佢一命呀！」','“We have a pulse! Your compressions and that shock saved her life.”'],
+    A:[['medic','「有返脈搏喇！靠晒你頭先嘅心外壓同電擊，救返佢一命啊！」','“We have a pulse! Your compressions and that shock saved her life.”'],
        ['nar','下個禮拜六，同一張枱……','The following Saturday. The same table.', ()=>{ tag('尾聲','EPILOGUE'); $('#gmLie').setAttribute('opacity',0); $('#gmSit').setAttribute('opacity',1); $('#gmSitBody').setAttribute('transform',''); }],
        ['gm','「今次輪到我斟茶畀你啦！」','“This time, let me pour the tea for you.”']],
     C:[['medic','「我哋已經盡咗力……太遲喇。」','“We did everything we could… it was too late.”'],
