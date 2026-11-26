@@ -568,7 +568,7 @@ const CFG = {
   aedPadsMs: 9000,          // the AED steps play by themselves: time given to stick the pads on
   aedAnalyseMs: 4000,       // 'analysing, do not touch'
   aedCountMs: 3000,         // 'stand clear' countdown before the automatic shock
-  breathMs: 3000,           // the breathing check is a short scripted beat (not scored)
+  breathMs: 4000,           // the breathing check is a short scripted beat (not scored)
   musicVolume: 0.5,         // background music, 0–1
   musicFiles: false,        // true: use your own bgm_tea.mp3 / bgm_tense.mp3 / bgm_win.mp3 / bgm_sad.mp3 next to this file
   aedInfo: '下次行過商場、港鐵站、屋苑大堂、學校，留意牆上嘅綠色 AED 標誌。知道佢喺邊，已經行咗第一步。',
@@ -1033,11 +1033,11 @@ const ENTER = {
     say(lines, ()=> go(G.aedFetched?'AED_ON':'POSTURE')); },
   POSTURE(){ hideObj(); $('#stage').classList.add('dim'); $('#brief').style.display='flex'; tag('場景三 · 準備心外壓','SCENE 3 · GET INTO POSITION');
     const steps=[['跪喺膝頭貼紙上面。','Kneel on the knee stickers.'],['雙手疊埋，掌根放喺胸口貼紙。','Interlock your hands, heel of the hand on the chest sticker.'],['手踭伸直，膊頭擺喺雙手正上面。','Arms straight, shoulders over your hands.']];
-    const els=document.querySelectorAll('.bs'); els.forEach(e=>e.className='bs'); $('#briefGo').textContent='擺好就開始壓'; let i=0;
-    const next=()=>{ if(G.state!=='POSTURE') return;
-      if(i<3){ els.forEach((e,k)=>e.className='bs'+(k===i?' on':k<i?' seen':'')); show('op','「'+steps[i][0]+'」',steps[i][1]); i++; G.briefT=setTimeout(next, FAST?30:3200); }
-      else { els.forEach(e=>e.className='bs seen'); $('#briefGo').textContent='開始壓！'; show('op','「準備好未？跟住節拍——壓！壓！壓！」','“Ready — push with the beat!”'); G.briefT=setTimeout(()=>{ if(G.state==='POSTURE') go('CPR'); }, FAST?30:2600); } };
-    next(); },
+    const els=document.querySelectorAll('.bs'); els.forEach(e=>e.className='bs'); $('#briefGo').textContent='擺好就開始壓';
+    const hl=i=>()=>{ els.forEach((e,k)=>e.className='bs'+(k===i?' on':k<i?' seen':'')); if(!FAST) G.lineMs=Math.max(G.lineMs,3200); };   // each step stays up until its voice line ends (min 3.2 s)
+    const lines=steps.map((s,i)=>['op','「'+s[0]+'」',s[1],hl(i)]);
+    lines.push(['op','「準備好未？跟住節拍——壓！壓！壓！」','“Ready — push with the beat!”',()=>{ els.forEach(e=>e.className='bs seen'); $('#briefGo').textContent='開始壓！'; }]);
+    say(lines, ()=>{ if(G.state==='POSTURE') go('CPR'); }); },
   CPR(){ clearTimeout(G.briefT); $('#brief').style.display='none'; if(!G.busy) $('#dialog').style.display='none'; G.round++; G.roundCount=0; detReset(); $('#stage').classList.add('dim'); $('#cpr').style.display='flex'; $('#aed').style.display='none';
     tag(G.round===1?'場景三 · 心外壓':'場景五 · 繼續心外壓', G.round===1?'SCENE 3 · CHEST COMPRESSIONS':'SCENE 5 · KEEP COMPRESSING'); setObj('cpr'); led(1); $('#coach').textContent=''; $('#cnt').textContent='0'; },
   AED_WAIT(){ setObj('fetch'); show('op','「做得好，千祈唔好停！附近有冇 AED？睇下牆上面綠色嗰個標誌，即刻攞過嚟！」','“Good, don’t stop! Is there an AED nearby? Look for the green sign and bring it!”'); },
