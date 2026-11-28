@@ -1,0 +1,22 @@
+/* Teaching drawings have stronger contrast and their own visual hierarchy. */
+#brief{left:65px;right:65px;top:185px;bottom:190px;padding:18px 25px;gap:10px;background:#fffaf0;border:3px solid #30304c}
+#brief h2{font-size:32px;margin-bottom:0}#brief h2 small{font-size:14px;color:#6c6474}
+#briefSteps{gap:18px}#brief .bs{position:relative;opacity:1;padding:13px 16px;border:2px solid #d9d2dd;background:#f5f1eb;border-radius:19px;transition:background .25s,border-color .25s,transform .25s}
+#brief .bs.on{background:#edf3e6;border:3px solid #458475;transform:translateY(-4px)}#brief .bs.seen{background:#fffaf0;border-color:#a9c0ac}
+#brief .bs svg{width:100%;height:180px;flex:none}#brief .bs b{font-size:26px;line-height:1.3;color:#30304c}#brief .bs span{font-size:20px;line-height:1.4;color:#60596a}#brief .bs small{display:none}
+.lesson-number{font-style:normal;font-size:13px;font-weight:700;letter-spacing:.1em;color:#777181}.bs.on .lesson-number{color:#397b69}
+#briefFoot{font-size:17px;color:#5d5664;line-height:1.4}#briefGo{font-size:21px}
+#playCpr{width:840px;height:450px;top:215px;padding:22px 25px;background:#fffaf0;border:3px solid #30304c}
+#playCpr .cpr-heading{margin-bottom:17px}#playCpr .cpr-heading strong{font-size:25px}#playCpr .cpr-body{grid-template-columns:235px 1fr 140px;gap:18px}
+#playCpr .cpr-sketch{display:block;background:#f0eaf3;border-radius:20px;padding:8px 4px 13px}
+#playCpr .hands-demo{width:220px;height:230px}#playCpr .cpr-sketch p{font-size:16px;font-weight:600;color:#30304c;line-height:1.5}
+#playCpr .cpr-count{font-size:64px}#playCpr .cpr-coach{font-size:25px;height:39px}#playCpr .rate-caption{font-size:16px;line-height:1.5}
+#playCpr .depth-widget h4{font-size:18px;color:#30304c;font-weight:600}#playCpr .depth-tube{height:176px}#playCpr .depth-value{font-size:24px}#playCpr .depth-note{font-size:13px;color:#6c6474}
+#playCpr .contact-only .depth-tube{height:90px;width:70px}#playCpr .cpr-foot{font-size:13px;line-height:1.5;margin-top:17px;align-items:center}
+#playCpr .rhythm-caption{font-size:13px}#playCpr .cpr-help{bottom:65px;font-size:20px;line-height:1.65;z-index:2}
+#playCpr.real-mode{width:300px;height:115px;top:auto;bottom:175px}#playCpr.real-mode .cpr-sketch{display:none}#playCpr.real-mode .cpr-body{display:block}#playCpr.real-mode .cpr-count{font-size:35px}#playCpr.real-mode .cpr-heading strong{font-size:19px}
+#aedBody{width:410px;background:#fffaf0;border:3px solid #30304c}#aedBody h3{font-size:21px}#aedBody .torso{max-height:275px}#aedBody>div:last-child{font-size:21px!important;line-height:1.5!important}#aedBody>div:last-child small{font-size:13px}
+#aedLcd{font-size:29px}#aedSteps div{font-size:17px}#aedSteps div b{font-size:11px}#torsoAed .pad rect{stroke-width:4px}#torsoAed .pad text{font-size:17px}#torsoAed svg>text{fill:#60596a;opacity:1}
+#airCard{width:1160px;background:#fffaf0;border:3px solid #30304c}#airCard svg{width:440px}#airCard ol{font-size:28px}#airCard li small{font-size:16px}
+#chapterAccent{max-width:470px;right:55px;font-size:27px}
+@media(prefers-reduced-motion:reduce){#brief .bs.on{transform:none}}

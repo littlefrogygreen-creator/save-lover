@@ -1,0 +1,25 @@
+/* Rich ink-and-paper motion, with a quiet alternative in the same interface. */
+#motionLayer{position:absolute;inset:0;pointer-events:none;z-index:10;overflow:hidden;border-radius:inherit}
+#paperSweep{position:absolute;left:0;top:0;width:55%;height:100%;background:#f3dba5;opacity:0;transform:translateX(-120%);border-inline:5px solid #fffaf080}
+#chapterAccent{position:absolute;right:85px;top:315px;max-width:650px;padding:12px 20px;background:#fffaf0ed;color:#665773;border-left:5px solid #d7aa58;font-family:'KaiTi','STKaiti',var(--font);font-size:29px;opacity:0}
+.ink-mark{position:absolute;width:15px;height:3px;border-radius:3px;opacity:0;transform-origin:center;will-change:transform,opacity}
+#actionRing{position:absolute;width:80px;height:50px;border:3px solid #8a7a9e;border-radius:50%;opacity:0;will-change:transform,opacity}
+#motionToggle{position:absolute;right:134px;top:22px;z-index:12;border:1.5px solid #30304c50;background:#fffaf0;color:var(--ink);font:inherit;font-size:14px;border-radius:20px;padding:9px 15px;cursor:pointer}
+#logo{padding-right:280px}
+button,.pill,#startCue{transition:background-color .18s,border-color .18s,box-shadow .18s,filter .18s}
+button:hover,.pill:hover{filter:brightness(1.025);border-color:#8a7a9e}
+#motionToggle:focus-visible,button:focus-visible{outline:3px solid #458475;outline-offset:4px}
+#startCue:hover{background:#f1cf87;box-shadow:0 6px 0 #30304c14}
+.pill:hover{background:#f5ead5}.pill.on{box-shadow:inset 0 -3px 0 #45847530}
+#advanceLine:hover{color:#458475;border-bottom-style:solid}
+#playCount{display:inline-block;transform-origin:50% 70%}
+.rhythm-zone{transition:box-shadow .15s,background .15s}.contact-active .depth-tube{box-shadow:0 0 0 5px #45847516;transition:box-shadow .12s,background .12s}
+#postureToggle:hover{color:#30304c}.cpr-help{animation:helpReveal .28s ease both}
+#chapterTrail .current i{box-shadow:0 0 0 4px #dfae581b;transition:background .25s,box-shadow .25s}
+.aed-analysing #aedLcd{position:relative;overflow:hidden}
+.aed-analysing #aedLcd::after{content:'';position:absolute;left:-35%;bottom:0;height:4px;width:35%;background:#458475;animation:analysisSweep 1.4s ease-in-out infinite}
+#shockBtn.arm{box-shadow:0 0 0 7px #dfae5824;animation:shockReady 1.5s ease-in-out infinite}
+.result-track i{animation:resultFill .8s cubic-bezier(.2,.75,.25,1) both;transform-origin:left}
+@keyframes analysisSweep{to{left:110%}}@keyframes helpReveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes shockReady{50%{transform:scale(1.065);box-shadow:0 0 0 14px #dfae580c}}@keyframes resultFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+#stage[data-motion=soft] #motionLayer{display:none}#stage[data-motion=soft] *,#stage[data-motion=soft] *::after{animation:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){#motionLayer{display:none}*,*::before,*::after{animation:none!important;transition:none!important}}
